@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
+import { api } from "@/lib/api"
 import { ArrowLeft } from "lucide-react"
 
 const categories = [
@@ -53,8 +54,7 @@ export default function NewPostPage() {
     setIsSubmitting(true)
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      await api.createPost(formData.title.trim(), formData.content.trim(), [formData.category])
 
       toast({
         title: "Post created!",
@@ -62,10 +62,10 @@ export default function NewPostPage() {
       })
 
       router.push("/community")
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to create post. Please try again.",
+        description: error.message || "Failed to create post. Please try again.",
         variant: "destructive",
       })
     } finally {

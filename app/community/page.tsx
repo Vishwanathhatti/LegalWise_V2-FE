@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { ProtectedRoute } from "@/components/layout/protected-route"
 import { Navbar } from "@/components/layout/navbar"
@@ -10,6 +10,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Heart, MessageCircle, Search, Plus, TrendingUp, Clock, Filter } from "lucide-react"
+import { useAuth } from "@/components/providers/auth-provider"
+import { api } from "@/lib/api"
 
 interface Post {
   id: string
@@ -28,70 +30,6 @@ interface Post {
   isLiked?: boolean
 }
 
-const mockPosts: Post[] = [
-  {
-    id: "1",
-    title: "Understanding Employment Contract Terms",
-    content:
-      'I recently received an employment contract and there are some clauses I don\'t understand. Can someone help explain what "non-compete" really means in practical terms?',
-    author: {
-      name: "Sarah Johnson",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=sarah",
-      role: "user",
-    },
-    category: "Employment Law",
-    likes: 24,
-    comments: 8,
-    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-  },
-  {
-    id: "2",
-    title: "Landlord-Tenant Rights: Security Deposit Issues",
-    content:
-      "My landlord is refusing to return my security deposit claiming damages that were pre-existing. What are my rights as a tenant? Has anyone dealt with similar situations?",
-    author: {
-      name: "Mike Chen",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=mike",
-      role: "user",
-    },
-    category: "Real Estate Law",
-    likes: 18,
-    comments: 12,
-    timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000),
-  },
-  {
-    id: "3",
-    title: "Small Business Legal Requirements - Getting Started",
-    content:
-      "As a lawyer specializing in business law, I often get asked about the essential legal steps when starting a small business. Here's a comprehensive guide...",
-    author: {
-      name: "Attorney Lisa Rodriguez",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=lisa",
-      role: "lawyer",
-      verified: true,
-    },
-    category: "Business Law",
-    likes: 45,
-    comments: 15,
-    timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000),
-  },
-  {
-    id: "4",
-    title: "Divorce Proceedings: What to Expect",
-    content:
-      "Going through a divorce can be overwhelming. I want to share my experience and what I learned about the process to help others who might be in similar situations.",
-    author: {
-      name: "Jennifer Davis",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=jennifer",
-      role: "user",
-    },
-    category: "Family Law",
-    likes: 32,
-    comments: 22,
-    timestamp: new Date(Date.now() - 8 * 60 * 60 * 1000),
-  },
-]
-
 const categories = [
   "All Categories",
   "Employment Law",
@@ -104,39 +42,90 @@ const categories = [
 ]
 
 export default function CommunityPage() {
-  const [posts, setPosts] = useState<Post[]>(mockPosts)
+  const { user } = useAuth()
+  const [posts, setPosts] = useState<Post[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("All Categories")
   const [sortBy, setSortBy] = useState<"recent" | "popular">("recent")
   const [showFilters, setShowFilters] = useState(false)
 
-  const handleLike = (postId: string) => {
-    setPosts(
-      posts.map((post) =>
-        post.id === postId
-          ? {
-              ...post,
-              likes: post.isLiked ? post.likes - 1 : post.likes + 1,
-              isLiked: !post.isLiked,
-            }
-          : post,
-      ),
-    )
+  const transformPost = (backendPost: any): Post => {
+    return {
+      id: backendPost._id,
+      title: backendPost.title,
+      content: backendPost.content || backendPost.description,
+      author: {
+        name: backendPost.author.name,
+        avatar: backendPost.author.profilePicture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${backendPost.author.email}`,
+        role: backendPost.author.role || "user",
+        verified: backendPost.author.lawyerId ? true : false,
+      },
+      category: backendPost.tags && backendPost.tags.length > 0 ? backendPost.tags[0] : "General",
+      likes: backendPost.likes ? backendPost.likes.length : 0,
+      comments: backendPost.comments ? backendPost.comments.length : 0,
+      timestamp: new Date(backendPost.createdAt),
+      isLiked: user && backendPost.likes ? backendPost.likes.some((like: any) => like.userId.toString() === user.id) : false,
+    }
   }
 
-  const filteredPosts = posts
-    .filter(
-      (post) =>
-        (selectedCategory === "All Categories" || post.category === selectedCategory) &&
-        (post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          post.content.toLowerCase().includes(searchTerm.toLowerCase())),
-    )
-    .sort((a, b) => {
+  const fetchPosts = async () => {
+    try {
+      setLoading(true)
+      setError("")
+      let fetchedPosts
       if (sortBy === "popular") {
-        return b.likes - a.likes
+        fetchedPosts = await api.getTrendingPosts()
+      } else if (searchTerm) {
+        fetchedPosts = await api.searchPosts(searchTerm)
+      } else {
+        const response = await api.getAllPosts()
+        fetchedPosts = response.posts
       }
-      return b.timestamp.getTime() - a.timestamp.getTime()
-    })
+      const transformedPosts = fetchedPosts.map(transformPost)
+      setPosts(transformedPosts)
+    } catch (err: any) {
+      setError(err.message || "Failed to fetch posts")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchPosts()
+  }, [sortBy, searchTerm])
+
+  const handleLike = async (postId: string) => {
+    if (!user) return
+    const post = posts.find(p => p.id === postId)
+    if (!post) return
+
+    try {
+      if (post.isLiked) {
+        await api.unlikePost(postId)
+        setPosts(posts.map(p =>
+          p.id === postId
+            ? { ...p, likes: p.likes - 1, isLiked: false }
+            : p
+        ))
+      } else {
+        await api.likePost(postId)
+        setPosts(posts.map(p =>
+          p.id === postId
+            ? { ...p, likes: p.likes + 1, isLiked: true }
+            : p
+        ))
+      }
+    } catch (err: any) {
+      setError(err.message || "Failed to update like")
+    }
+  }
+
+  const filteredPosts = posts.filter(
+    (post) =>
+      selectedCategory === "All Categories" || post.category === selectedCategory
+  )
 
   return (
     <ProtectedRoute>
@@ -173,6 +162,12 @@ export default function CommunityPage() {
               Filters & Sort
             </Button>
           </div>
+
+          {error && (
+            <div className="mb-4 p-4 bg-red-100 text-red-700 rounded-md">
+              {error}
+            </div>
+          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
             {/* Sidebar - Hidden on mobile unless toggled */}
@@ -256,7 +251,24 @@ export default function CommunityPage() {
                 </p>
               </div>
 
-              {filteredPosts.map((post) => (
+              {loading ? (
+                <Card>
+                  <CardContent className="p-8 text-center">
+                    <div className="text-gray-500">Loading posts...</div>
+                  </CardContent>
+                </Card>
+              ) : filteredPosts.length === 0 ? (
+                <Card>
+                  <CardContent className="p-8 sm:p-12 text-center">
+                    <div className="text-gray-400 mb-4">
+                      <Search className="w-8 h-8 sm:w-12 sm:h-12 mx-auto" />
+                    </div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No posts found</h3>
+                    <p className="text-gray-600">Try adjusting your search terms or category filter.</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                filteredPosts.map((post) => (
                 <Card key={post.id} className="hover:shadow-md transition-shadow">
                   <CardContent className="p-4 sm:p-6">
                     <div className="flex items-start space-x-3 sm:space-x-4">
@@ -314,18 +326,7 @@ export default function CommunityPage() {
                     </div>
                   </CardContent>
                 </Card>
-              ))}
-
-              {filteredPosts.length === 0 && (
-                <Card>
-                  <CardContent className="p-8 sm:p-12 text-center">
-                    <div className="text-gray-400 mb-4">
-                      <Search className="w-8 h-8 sm:w-12 sm:h-12 mx-auto" />
-                    </div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">No posts found</h3>
-                    <p className="text-gray-600">Try adjusting your search terms or category filter.</p>
-                  </CardContent>
-                </Card>
+                ))
               )}
             </div>
           </div>

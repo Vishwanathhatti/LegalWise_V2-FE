@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useMemo } from "react"
 import { ProtectedRoute } from "@/components/layout/protected-route"
 import { Navbar } from "@/components/layout/navbar"
 import { Button } from "@/components/ui/button"
@@ -10,160 +10,54 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/components/providers/auth-provider"
+import { useSocket } from "@/components/providers/socket-provider"
+import { api } from "@/lib/api"
+import { useToast } from "@/hooks/use-toast"
 import { Send, Search, Phone, Video, MoreVertical, Paperclip, Smile, ArrowLeft, MessageSquare } from "lucide-react"
 
 interface Message {
-  id: string
-  content: string
-  sender: string
-  timestamp: Date
-  type: "text" | "file" | "image"
+  _id: string
+  directMessageId: string
+  senderId: {
+    _id: string
+    name: string
+    profilePicture?: string
+  }
+  message: string
+  createdAt: string
 }
 
 interface Conversation {
-  id: string
-  participant: {
+  _id: string
+  participants: Array<{
+    _id: string
     name: string
-    avatar: string
-    role: "user" | "lawyer"
-    online: boolean
-  }
-  lastMessage: string
-  lastMessageTime: Date
-  unreadCount: number
+    profilePicture?: string
+    role: string
+  }>
   messages: Message[]
+  createdAt: string
+  updatedAt: string
 }
-
-const mockConversations: Conversation[] = [
-  {
-    id: "1",
-    participant: {
-      name: "Sarah Johnson",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=sarah-msg",
-      role: "lawyer",
-      online: true,
-    },
-    lastMessage: "I'll review the contract and get back to you by tomorrow.",
-    lastMessageTime: new Date(Date.now() - 30 * 60 * 1000),
-    unreadCount: 2,
-    messages: [
-      {
-        id: "1",
-        content: "Hi! I need help reviewing an employment contract.",
-        sender: "user",
-        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-        type: "text",
-      },
-      {
-        id: "2",
-        content: "I'd be happy to help you with that. Could you please share the contract document?",
-        sender: "Sarah Johnson",
-        timestamp: new Date(Date.now() - 90 * 60 * 1000),
-        type: "text",
-      },
-      {
-        id: "3",
-        content: "I'll review the contract and get back to you by tomorrow.",
-        sender: "Sarah Johnson",
-        timestamp: new Date(Date.now() - 30 * 60 * 1000),
-        type: "text",
-      },
-    ],
-  },
-  {
-    id: "2",
-    participant: {
-      name: "Michael Chen",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=michael-msg",
-      role: "lawyer",
-      online: false,
-    },
-    lastMessage: "Thank you for the consultation. I'll prepare the documents.",
-    lastMessageTime: new Date(Date.now() - 2 * 60 * 60 * 1000),
-    unreadCount: 0,
-    messages: [
-      {
-        id: "1",
-        content: "Thank you for the consultation. I'll prepare the documents.",
-        sender: "Michael Chen",
-        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-        type: "text",
-      },
-    ],
-  },
-  {
-    id: "3",
-    participant: {
-      name: "Emma Davis",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=emma-msg",
-      role: "user",
-      online: true,
-    },
-    lastMessage: "When can we schedule the next meeting?",
-    lastMessageTime: new Date(Date.now() - 4 * 60 * 60 * 1000),
-    unreadCount: 1,
-    messages: [
-      {
-        id: "1",
-        content: "When can we schedule the next meeting?",
-        sender: "Emma Davis",
-        timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000),
-        type: "text",
-      },
-    ],
-  },
-  {
-    id: "4",
-    participant: {
-      name: "Robert Wilson",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=robert-msg",
-      role: "lawyer",
-      online: true,
-    },
-    lastMessage: "The intellectual property filing has been completed successfully.",
-    lastMessageTime: new Date(Date.now() - 6 * 60 * 60 * 1000),
-    unreadCount: 0,
-    messages: [
-      {
-        id: "1",
-        content: "The intellectual property filing has been completed successfully.",
-        sender: "Robert Wilson",
-        timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000),
-        type: "text",
-      },
-    ],
-  },
-  {
-    id: "5",
-    participant: {
-      name: "Jennifer Martinez",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=jennifer-msg",
-      role: "lawyer",
-      online: false,
-    },
-    lastMessage: "I've prepared the divorce settlement agreement for your review.",
-    lastMessageTime: new Date(Date.now() - 12 * 60 * 60 * 1000),
-    unreadCount: 3,
-    messages: [
-      {
-        id: "1",
-        content: "I've prepared the divorce settlement agreement for your review.",
-        sender: "Jennifer Martinez",
-        timestamp: new Date(Date.now() - 12 * 60 * 60 * 1000),
-        type: "text",
-      },
-    ],
-  },
-]
 
 export default function MessagesPage() {
   const { user } = useAuth()
-  const [conversations, setConversations] = useState<Conversation[]>(mockConversations)
-  const [activeConversation, setActiveConversation] = useState<Conversation | null>(null)
+  const { socket, isConnected } = useSocket()
+  const { toast } = useToast()
+
+  const [conversations, setConversations] = useState<Conversation[]>([])
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null)
   const [newMessage, setNewMessage] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
   const [showConversationList, setShowConversationList] = useState(true)
+  const [loading, setLoading] = useState(true)
+
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  const activeConversation = useMemo(
+    () => conversations.find(conv => conv._id === activeConversationId) || null,
+    [conversations, activeConversationId]
+  )
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -173,78 +67,168 @@ export default function MessagesPage() {
     scrollToBottom()
   }, [activeConversation?.messages])
 
-  const handleSendMessage = () => {
+  // Load conversations on mount
+  useEffect(() => {
+    const loadConversations = async () => {
+      try {
+        const response = await api.getDMs()
+        const sortedConversations = response.dms.sort((a: Conversation, b: Conversation) => {
+          const aLastMessage = a.messages[a.messages.length - 1]
+          const bLastMessage = b.messages[b.messages.length - 1]
+          if (!aLastMessage && !bLastMessage) return 0
+          if (!aLastMessage) return 1
+          if (!bLastMessage) return -1
+          return new Date(bLastMessage.createdAt).getTime() - new Date(aLastMessage.createdAt).getTime()
+        })
+        setConversations(sortedConversations)
+
+        if (socket && sortedConversations) {
+          sortedConversations.forEach((dm: Conversation) => {
+            socket.emit("joinRoom", dm._id)
+          })
+        }
+      } catch (error) {
+        console.error("Failed to load conversations:", error)
+        toast({
+          title: "Error",
+          description: "Failed to load conversations",
+          variant: "destructive",
+        })
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (user) loadConversations()
+  }, [user, toast, socket])
+
+  // Socket events
+  useEffect(() => {
+    if (!socket) return
+
+    socket.on("newMessage", (message: any) => {
+      if (!message || !message.senderId) return
+
+      const normalizedMessage: Message = {
+        ...message,
+        _id: message._id || `temp-${Date.now()}`,
+        message: message.message || message.content || "",
+        senderId: {
+          _id: message.senderId?._id || "",
+          name: message.senderId?.name || "",
+          profilePicture: message.senderId?.profilePicture,
+        },
+        createdAt: message.createdAt || new Date().toISOString(),
+      }
+
+      setConversations(prev =>
+        prev
+          .map(conv =>
+            conv._id === message.directMessageId
+              ? {
+                  ...conv,
+                  messages: [...conv.messages, normalizedMessage],
+                  updatedAt: normalizedMessage.createdAt,
+                }
+              : conv
+          )
+          .sort((a, b) => {
+            const aLastMessage = a.messages[a.messages.length - 1]
+            const bLastMessage = b.messages[b.messages.length - 1]
+            if (!aLastMessage && !bLastMessage) return 0
+            if (!aLastMessage) return 1
+            if (!bLastMessage) return -1
+            return new Date(bLastMessage.createdAt).getTime() - new Date(aLastMessage.createdAt).getTime()
+          })
+      )
+    })
+
+    socket.on("dmRequestReceived", (request: any) => {
+      toast({
+        title: "New DM Request",
+        description: `You have a new DM request from ${request.senderId.name}`,
+      })
+      api.getDMs().then(res => setConversations(res.dms)).catch(console.error)
+    })
+
+    return () => {
+      socket.off("newMessage")
+      socket.off("dmRequestReceived")
+    }
+  }, [socket, toast])
+
+  const handleSendMessage = async () => {
     if (!newMessage.trim() || !activeConversation) return
 
-    const message: Message = {
-      id: Date.now().toString(),
-      content: newMessage,
-      sender: user?.name || "You",
-      timestamp: new Date(),
-      type: "text",
+    try {
+      const sentMessage = await api.sendMessage(activeConversation._id, newMessage)
+      setNewMessage("")
+
+      const updatedMessage: Message = {
+        ...sentMessage,
+        senderId: {
+          _id: user?.id || "",
+          name: user?.name || "",
+          profilePicture: user?.avatar,
+        },
+      }
+
+      setConversations(prev =>
+        prev.map(conv =>
+          conv._id === activeConversation._id
+            ? { ...conv, messages: [...conv.messages, updatedMessage], updatedAt: updatedMessage.createdAt }
+            : conv
+        )
+      )
+    } catch (error) {
+      console.error("Failed to send message:", error)
+      toast({
+        title: "Error",
+        description: "Failed to send message",
+        variant: "destructive",
+      })
     }
-
-    // Update the active conversation
-    const updatedConversation = {
-      ...activeConversation,
-      messages: [...activeConversation.messages, message],
-      lastMessage: newMessage,
-      lastMessageTime: new Date(),
-    }
-
-    // Update conversations list
-    setConversations(conversations.map((conv) => (conv.id === activeConversation.id ? updatedConversation : conv)))
-
-    setActiveConversation(updatedConversation)
-    setNewMessage("")
-
-    // Simulate response after a delay
-    setTimeout(
-      () => {
-        const response: Message = {
-          id: (Date.now() + 1).toString(),
-          content: "Thanks for your message. I'll get back to you shortly.",
-          sender: activeConversation.participant.name,
-          timestamp: new Date(),
-          type: "text",
-        }
-
-        const responseConversation = {
-          ...updatedConversation,
-          messages: [...updatedConversation.messages, response],
-          lastMessage: response.content,
-          lastMessageTime: new Date(),
-        }
-
-        setConversations(conversations.map((conv) => (conv.id === activeConversation.id ? responseConversation : conv)))
-
-        setActiveConversation(responseConversation)
-      },
-      1000 + Math.random() * 2000,
-    )
   }
 
-  const filteredConversations = conversations.filter((conv) =>
-    conv.participant.name.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
+  const filteredConversations = useMemo(() => {
+    return conversations.filter(conv => {
+      const otherParticipant = conv.participants.find(p => p._id !== user?.id)
+      return otherParticipant?.name.toLowerCase().includes(searchTerm.toLowerCase()) || false
+    })
+  }, [conversations, searchTerm, user?.id])
 
-  const markAsRead = (conversationId: string) => {
-    setConversations(conversations.map((conv) => (conv.id === conversationId ? { ...conv, unreadCount: 0 } : conv)))
-  }
+  const handleConversationSelect = async (conversation: Conversation) => {
+    setActiveConversationId(conversation._id)
+    setShowConversationList(false)
 
-  const handleConversationSelect = (conversation: Conversation) => {
-    setActiveConversation(conversation)
-    markAsRead(conversation.id)
-    setShowConversationList(false) // Hide conversation list on mobile
+    try {
+      const messages = await api.getDMMessages(conversation._id)
+      const lastMessage = messages[messages.length - 1]
+      setConversations(prev =>
+        prev.map(conv =>
+          conv._id === conversation._id
+            ? { ...conv, messages, updatedAt: lastMessage ? lastMessage.createdAt : conv.updatedAt }
+            : conv
+        )
+      )
+    } catch (error) {
+      console.error("Failed to load messages:", error)
+      toast({
+        title: "Error",
+        description: "Failed to load messages",
+        variant: "destructive",
+      })
+    }
   }
 
   const handleBackToList = () => {
     setShowConversationList(true)
-    setActiveConversation(null)
+    setActiveConversationId(null)
   }
 
   return (
     <ProtectedRoute>
+
       <div className="min-h-screen bg-gray-50">
         <Navbar />
         <div className="flex h-[calc(100vh-4rem)]">
@@ -272,61 +256,73 @@ export default function MessagesPage() {
             <div className="flex-1 overflow-hidden">
               <ScrollArea className="h-full">
                 <div className="p-2">
-                  {filteredConversations.map((conversation) => (
-                    <Card
-                      key={conversation.id}
-                      className={`mb-2 cursor-pointer transition-colors hover:bg-gray-50 ${
-                        activeConversation?.id === conversation.id ? "bg-blue-50 border-blue-200" : ""
-                      }`}
-                      onClick={() => handleConversationSelect(conversation)}
-                    >
-                      <CardContent className="p-3">
-                        <div className="flex items-start space-x-3">
-                          <div className="relative flex-shrink-0">
-                            <Avatar className="w-10 h-10 sm:w-12 sm:h-12">
-                              <AvatarImage
-                                src={conversation.participant.avatar || "/placeholder.svg"}
-                                alt={conversation.participant.name}
-                              />
-                              <AvatarFallback>{conversation.participant.name.charAt(0)}</AvatarFallback>
-                            </Avatar>
-                            {conversation.participant.online && (
-                              <div className="absolute -bottom-1 -right-1 w-3 h-3 sm:w-4 sm:h-4 bg-green-500 border-2 border-white rounded-full"></div>
-                            )}
-                          </div>
+                  {loading ? (
+                    <div className="text-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                      <p className="text-gray-500 mt-2">Loading conversations...</p>
+                    </div>
+                  ) : filteredConversations.length === 0 ? (
+                    <div className="text-center py-8">
+                      <MessageSquare className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                      <p className="text-gray-500">No conversations yet</p>
+                    </div>
+                  ) : (
+                    filteredConversations.map((conversation) => {
+                      const otherParticipant = conversation.participants.find(p => p._id !== user?.id)
+                      const lastMessage = conversation.messages[conversation.messages.length - 1]
 
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between mb-1">
-                              <h4 className="font-medium text-gray-900 truncate text-sm sm:text-base pr-2">
-                                {conversation.participant.name}
-                              </h4>
-                              <div className="flex items-center space-x-1 flex-shrink-0">
-                                {conversation.unreadCount > 0 && (
-                                  <Badge className="bg-blue-600 text-white text-xs px-2 py-1">
-                                    {conversation.unreadCount}
-                                  </Badge>
+                      return (
+                        <Card
+                          key={`${conversation._id}-${conversation.updatedAt}`}
+                          className={`mb-2 cursor-pointer transition-colors hover:bg-gray-50 ${
+                            activeConversation?._id === conversation._id ? "bg-blue-50 border-blue-200" : ""
+                          }`}
+                          onClick={() => handleConversationSelect(conversation)}
+                        >
+                          <CardContent className="p-3">
+                            <div className="flex items-start space-x-3">
+                              <div className="relative flex-shrink-0">
+                                <Avatar className="w-10 h-10 sm:w-12 sm:h-12">
+                                  <AvatarImage
+                                    src={otherParticipant?.profilePicture || "/placeholder.svg"}
+                                    alt={otherParticipant?.name}
+                                  />
+                                  <AvatarFallback>{otherParticipant?.name?.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                                {isConnected && (
+                                  <div className="absolute -bottom-1 -right-1 w-3 h-3 sm:w-4 sm:h-4 bg-green-500 border-2 border-white rounded-full"></div>
                                 )}
-                                <Badge variant="outline" className="text-xs">
-                                  {conversation.participant.role}
-                                </Badge>
+                              </div>
+
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between mb-1">
+                                  <h4 className="font-medium text-gray-900 truncate text-sm sm:text-base pr-2">
+                                    {otherParticipant?.name}
+                                  </h4>
+                                  <div className="flex items-center space-x-1 flex-shrink-0">
+                                    <Badge variant="outline" className="text-xs">
+                                      {otherParticipant?.role}
+                                    </Badge>
+                                  </div>
+                                </div>
+
+                                <p className="text-xs sm:text-sm text-gray-600 mb-1 line-clamp-2 break-words">
+                                  {lastMessage ? lastMessage.message : "No messages yet"}
+                                </p>
+
+                                <p className="text-xs text-gray-400">
+                                  {lastMessage ? new Date(lastMessage.createdAt).toLocaleTimeString([], {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  }) : ""}
+                                </p>
                               </div>
                             </div>
-
-                            <p className="text-xs sm:text-sm text-gray-600 mb-1 line-clamp-2 break-words">
-                              {conversation.lastMessage}
-                            </p>
-
-                            <p className="text-xs text-gray-400">
-                              {conversation.lastMessageTime.toLocaleTimeString([], {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
-                            </p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                          </CardContent>
+                        </Card>
+                      )
+                    })
+                  )}
                 </div>
               </ScrollArea>
             </div>
@@ -346,22 +342,22 @@ export default function MessagesPage() {
                       <div className="relative flex-shrink-0">
                         <Avatar className="w-8 h-8 sm:w-10 sm:h-10">
                           <AvatarImage
-                            src={activeConversation.participant.avatar || "/placeholder.svg"}
-                            alt={activeConversation.participant.name}
+                            src={activeConversation.participants.find(p => p._id !== user?.id)?.profilePicture || "/placeholder.svg"}
+                            alt={activeConversation.participants.find(p => p._id !== user?.id)?.name}
                           />
-                          <AvatarFallback>{activeConversation.participant.name.charAt(0)}</AvatarFallback>
+                          <AvatarFallback>{activeConversation.participants.find(p => p._id !== user?.id)?.name?.charAt(0)}</AvatarFallback>
                         </Avatar>
-                        {activeConversation.participant.online && (
+                        {isConnected && (
                           <div className="absolute -bottom-1 -right-1 w-2 h-2 sm:w-3 sm:h-3 bg-green-500 border-2 border-white rounded-full"></div>
                         )}
                       </div>
                       <div className="min-w-0">
                         <h3 className="font-semibold text-gray-900 text-sm sm:text-base truncate">
-                          {activeConversation.participant.name}
+                          {activeConversation.participants.find(p => p._id !== user?.id)?.name}
                         </h3>
                         <p className="text-xs sm:text-sm text-gray-500">
-                          {activeConversation.participant.online ? "Online" : "Offline"} •{" "}
-                          {activeConversation.participant.role}
+                          {isConnected ? "Online" : "Offline"} •{" "}
+                          {activeConversation.participants.find(p => p._id !== user?.id)?.role}
                         </p>
                       </div>
                     </div>
@@ -385,46 +381,52 @@ export default function MessagesPage() {
                   <ScrollArea className="h-full">
                     <div className="p-4">
                       <div className="space-y-4 max-w-4xl mx-auto">
-                        {activeConversation.messages.map((message) => (
-                          <div
-                            key={message.id}
-                            className={`flex ${message.sender === user?.name ? "justify-end" : "justify-start"}`}
-                          >
+                        {activeConversation.messages.map((message) => {
+                          if (!message || !message.senderId || !message.senderId._id) return null
+                          const isCurrentUser = message.senderId._id === user?.id
+                          const otherParticipant = activeConversation.participants.find(p => p._id !== user?.id)
+
+                          return (
                             <div
-                              className={`flex space-x-2 sm:space-x-3 max-w-xs sm:max-w-2xl ${message.sender === user?.name ? "flex-row-reverse space-x-reverse" : ""}`}
+                              key={message._id}
+                              className={`flex ${isCurrentUser ? "justify-end" : "justify-start"}`}
                             >
-                              <Avatar className="w-6 h-6 sm:w-8 sm:h-8 flex-shrink-0">
-                                {message.sender === user?.name ? (
-                                  <>
-                                    <AvatarImage src={user?.avatar || "/placeholder.svg"} />
-                                    <AvatarFallback>{user?.name?.charAt(0)}</AvatarFallback>
-                                  </>
-                                ) : (
-                                  <>
-                                    <AvatarImage src={activeConversation.participant.avatar || "/placeholder.svg"} />
-                                    <AvatarFallback>{activeConversation.participant.name.charAt(0)}</AvatarFallback>
-                                  </>
-                                )}
-                              </Avatar>
                               <div
-                                className={`rounded-lg p-2 sm:p-3 min-w-0 ${
-                                  message.sender === user?.name
-                                    ? "bg-blue-600 text-white"
-                                    : "bg-white border border-gray-200"
-                                }`}
+                                className={`flex space-x-2 sm:space-x-3 max-w-xs sm:max-w-2xl ${isCurrentUser ? "flex-row-reverse space-x-reverse" : ""}`}
                               >
-                                <p className="text-xs sm:text-sm break-words">{message.content}</p>
-                                <p
-                                  className={`text-xs mt-1 ${
-                                    message.sender === user?.name ? "text-blue-100" : "text-gray-500"
+                                <Avatar className="w-6 h-6 sm:w-8 sm:h-8 flex-shrink-0">
+                                  {isCurrentUser ? (
+                                    <>
+                                      <AvatarImage src={user?.avatar || "/placeholder.svg"} />
+                                      <AvatarFallback>{user?.name?.charAt(0)}</AvatarFallback>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <AvatarImage src={otherParticipant?.profilePicture || "/placeholder.svg"} />
+                                      <AvatarFallback>{otherParticipant?.name?.charAt(0)}</AvatarFallback>
+                                    </>
+                                  )}
+                                </Avatar>
+                                <div
+                                  className={`rounded-lg p-2 sm:p-3 min-w-0 ${
+                                    isCurrentUser
+                                      ? "bg-blue-600 text-white"
+                                      : "bg-white border border-gray-200"
                                   }`}
                                 >
-                                  {message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                                </p>
+                                  <p className="text-xs sm:text-sm break-words">{message.message}</p>
+                                  <p
+                                    className={`text-xs mt-1 ${
+                                      isCurrentUser ? "text-blue-100" : "text-gray-500"
+                                    }`}
+                                  >
+                                    {new Date(message.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                  </p>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        ))}
+                          )
+                        })}
                         <div ref={messagesEndRef} />
                       </div>
                     </div>

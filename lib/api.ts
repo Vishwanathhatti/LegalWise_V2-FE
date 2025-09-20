@@ -127,127 +127,142 @@ class ApiClient {
 
   // Posts APIs
   async getAllPosts(): Promise<{ posts: any[] }> {
-    const response = await this.request<{ posts: any[]; success: boolean }>('/posts/');
+    const response = await this.request<{ posts: any[]; success: boolean }>('/community/posts/');
     return { posts: response.posts };
   }
 
   async getTrendingPosts(): Promise<any[]> {
-    return this.request('/posts/trending');
+    return this.request('/community/posts/trending');
   }
 
-  async createPost(title: string, description: string): Promise<{ post: any; success: boolean; message: string }> {
-    return this.request('/posts/', {
+  async createPost(title: string, content: string, tags: string[]): Promise<{ post: any; success: boolean; message: string }> {
+    return this.request('/community/posts/', {
       method: 'POST',
-      body: JSON.stringify({ title, description }),
+      body: JSON.stringify({ title, description: content, tags }),
     });
   }
 
   async getSinglePost(id: string): Promise<{ post: any; success: boolean }> {
-    return this.request(`/posts/getpostbyid/${id}`);
+    return this.request(`/community/posts/getpostbyid/${id}`);
   }
 
   async searchPosts(keyword: string): Promise<any[]> {
-    return this.request(`/posts/search?keyword=${encodeURIComponent(keyword)}`);
+    return this.request(`/community/posts/search?keyword=${encodeURIComponent(keyword)}`);
   }
 
   async likePost(id: string): Promise<{ success: boolean; message: string; post: any }> {
-    return this.request(`/posts/like/${id}`, {
+    return this.request(`/community/posts/like/${id}`, {
       method: 'PUT',
     });
   }
 
   async unlikePost(id: string): Promise<{ success: boolean; message: string; post: any }> {
-    return this.request(`/posts/unlike/${id}`, {
+    return this.request(`/community/posts/unlike/${id}`, {
       method: 'PUT',
     });
   }
 
   async getUserPosts(userId: string): Promise<{ userPosts: any[]; success: boolean }> {
-    return this.request(`/posts/get/${userId}`);
+    return this.request(`/community/posts/get/${userId}`);
   }
 
   async getLikedPosts(): Promise<{ likedPosts: any[]; success: boolean }> {
-    return this.request('/posts/likes/get');
+    return this.request('/community/posts/likes/get');
   }
 
   // Comments APIs
   async getPostComments(postId: string): Promise<{ success: boolean; comments: any }> {
-    return this.request(`/comments/${postId}`);
+    return this.request(`/community/comments/${postId}`);
   }
 
   async addComment(postId: string, text: string): Promise<{ success: boolean; message: string; comment: any }> {
-    return this.request(`/comments/${postId}`, {
+    return this.request(`/community/comments/add-comment/${postId}`, {
       method: 'POST',
       body: JSON.stringify({ text }),
     });
   }
 
   async likeComment(commentId: string): Promise<{ success: boolean; message: string; comment: any }> {
-    return this.request(`/comments/like/${commentId}`, {
+    return this.request(`/community/comments/addLike-comment/${commentId}`, {
       method: 'PUT',
     });
   }
 
   async unlikeComment(commentId: string): Promise<{ success: boolean; message: string; comment: any }> {
-    return this.request(`/comments/unlike/${commentId}`, {
+    return this.request(`/community/comments/removeLike-comment/${commentId}`, {
       method: 'PUT',
     });
   }
 
   async deleteComment(commentId: string): Promise<{ success: boolean; message: string }> {
-    return this.request(`/comments/${commentId}`, {
+    return this.request(`/community/comments/remove-comment/${commentId}`, {
       method: 'DELETE',
     });
   }
 
   async getUserComments(): Promise<{ success: boolean; userComments: any[] }> {
-    return this.request('/comments/user');
+    return this.request('/community/comments/user');
   }
 
   // Lawyers APIs
   async registerLawyer(lawyerData: any): Promise<any> {
-    return this.request('/lawyers/register', {
+    return this.request('/lawyer/register', {
       method: 'POST',
       body: JSON.stringify(lawyerData),
     });
   }
 
   async getLawyerProfile(): Promise<any> {
-    return this.request('/lawyers/profile');
+    return this.request('/lawyer/profile');
   }
 
   async updateLawyerProfile(updates: any): Promise<any> {
-    return this.request('/lawyers/update', {
+    return this.request('/lawyer/update', {
       method: 'PUT',
       body: JSON.stringify(updates),
     });
   }
 
-  async getAllLawyers(): Promise<any[]> {
-    return this.request('/lawyers/');
+  async getAllLawyers(search?: string): Promise<{ success: boolean; lawyers: any[] }> {
+    const query = search ? `?search=${encodeURIComponent(search)}` : '';
+    return this.request(`/lawyer/all${query}`);
   }
 
   async searchLawyers(query: any): Promise<any[]> {
-    return this.request('/lawyers/search', {
+    return this.request('/lawyer/search', {
       method: 'POST',
       body: JSON.stringify(query),
     });
   }
 
   // DMs APIs
-  async sendDM(receiverId: string, message: string): Promise<any> {
-    return this.request('/dms/send', {
+  async sendDMRequest(receiverId: string): Promise<any> {
+    return this.request('/dm/request', {
       method: 'POST',
-      body: JSON.stringify({ receiverId, message }),
+      body: JSON.stringify({ receiverId }),
     });
   }
 
-  async getDMs(): Promise<any[]> {
-    return this.request('/dms/');
+  async respondToDMRequest(requestId: string, status: 'accepted' | 'rejected'): Promise<any> {
+    return this.request('/dm/request/respond', {
+      method: 'POST',
+      body: JSON.stringify({ requestId, status }),
+    });
   }
 
-  async getDMConversation(userId: string): Promise<any[]> {
-    return this.request(`/dms/conversation/${userId}`);
+  async sendMessage(dmId: string, message: string): Promise<any> {
+    return this.request(`/dm/send/${dmId}`, {
+      method: 'POST',
+      body: JSON.stringify({ message }),
+    });
+  }
+
+  async getDMs(): Promise<{ success: boolean; dms: any[] }> {
+    return this.request('/dm/dms');
+  }
+
+  async getDMMessages(dmId: string): Promise<any[]> {
+    return this.request(`/dm/${dmId}/messages`);
   }
 
   // Documents APIs
