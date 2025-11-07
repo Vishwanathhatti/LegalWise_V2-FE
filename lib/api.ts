@@ -201,7 +201,7 @@ class ApiClient {
   }
 
   async getUserComments(): Promise<{ success: boolean; userComments: any[] }> {
-    return this.request('/community/comments/user');
+    return this.request('/community/comments/user-comments/user');
   }
 
   // Lawyers APIs
@@ -233,6 +233,10 @@ class ApiClient {
       method: 'POST',
       body: JSON.stringify(query),
     });
+  }
+
+  async checkSubscriptionStatus(): Promise<{ success: boolean; isActive: boolean; subscription: any }> {
+    return this.request('/lawyer/subscription/status');
   }
 
   // DMs APIs

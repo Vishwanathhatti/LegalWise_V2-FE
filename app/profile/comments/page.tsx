@@ -1,45 +1,54 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { ProtectedRoute } from "@/components/layout/protected-route"
 import { Navbar } from "@/components/layout/navbar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { MessageCircle, ArrowLeft } from "lucide-react"
+import { MessageCircle, ArrowLeft, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { api } from "@/lib/api"
+import { useToast } from "@/hooks/use-toast"
 
-const mockCommentedPosts = [
-  {
-    id: "5",
-    title: "Contract Review Best Practices",
-    author: "Attorney Smith",
-    category: "Contract Law",
-    myComment:
-      "This is very helpful, thank you for sharing! I especially appreciate the section about termination clauses.",
-    timestamp: new Date(Date.now() - 12 * 60 * 60 * 1000),
-  },
-  {
-    id: "6",
-    title: "Understanding Copyright Law",
-    author: "Legal Expert",
-    category: "Intellectual Property",
-    myComment:
-      "Could you elaborate on fair use exceptions? I'm working on a project that might fall under educational use.",
-    timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000),
-  },
-  {
-    id: "7",
-    title: "Employment Law Updates 2024",
-    author: "Sarah Johnson",
-    category: "Employment Law",
-    myComment: "Great summary! The changes to overtime regulations are particularly important for small businesses.",
-    timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
-  },
-]
+interface UserComment {
+  _id: string
+  content: string
+  postId: {
+    _id: string
+    title: string
+  }
+  createdAt: string
+}
 
 export default function CommentsPage() {
   const router = useRouter()
+  const { toast } = useToast()
+  const [comments, setComments] = useState<UserComment[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const loadUserComments = async () => {
+      try {
+        setLoading(true)
+        const response = await api.getUserComments()
+        if (response.success) {
+          setComments(response.userComments)
+        }
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to load comments",
+          variant: "destructive",
+        })
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadUserComments()
+  }, [toast])
 
   return (
     <ProtectedRoute>
@@ -60,33 +69,35 @@ export default function CommentsPage() {
 
           {/* Comments List */}
           <div className="space-y-4">
-            {mockCommentedPosts.map((post) => (
-              <Card key={post.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-4 sm:p-6">
-                  <Link href={`/community/post/${post.id}`}>
-                    <h3 className="text-lg sm:text-xl font-semibold text-gray-900 hover:text-blue-600 transition-colors mb-3">
-                      {post.title}
-                    </h3>
-                  </Link>
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin" />
+              </div>
+            ) : comments.length > 0 ? (
+              comments.map((comment) => (
+                <Card key={comment._id} className="hover:shadow-md transition-shadow">
+                  <CardContent className="p-4 sm:p-6">
+                    <Link href={`/community/post/${comment.postId._id}`}>
+                      <h3 className="text-lg sm:text-xl font-semibold text-gray-900 hover:text-blue-600 transition-colors mb-3">
+                        {comment.postId.title}
+                      </h3>
+                    </Link>
 
-                  <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                    <div className="flex items-start space-x-2 mb-2">
-                      <MessageCircle className="w-4 h-4 text-gray-400 mt-1 flex-shrink-0" />
-                      <span className="text-sm font-medium text-gray-700">Your comment:</span>
+                    <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                      <div className="flex items-start space-x-2 mb-2">
+                        <MessageCircle className="w-4 h-4 text-gray-400 mt-1 flex-shrink-0" />
+                        <span className="text-sm font-medium text-gray-700">Your comment:</span>
+                      </div>
+                      <p className="text-sm text-gray-700 pl-6">"{comment.content}"</p>
                     </div>
-                    <p className="text-sm text-gray-700 pl-6">"{post.myComment}"</p>
-                  </div>
 
-                  <div className="flex flex-wrap items-center gap-2 text-sm text-gray-500">
-                    <span>on post by {post.author}</span>
-                    <Badge variant="outline">{post.category}</Badge>
-                    <span>Commented {post.timestamp.toLocaleDateString()}</span>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-
-            {mockCommentedPosts.length === 0 && (
+                    <div className="flex flex-wrap items-center gap-2 text-sm text-gray-500">
+                      <span>Commented {new Date(comment.createdAt).toLocaleDateString()}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
               <Card>
                 <CardContent className="p-8 sm:p-12 text-center">
                   <MessageCircle className="w-12 h-12 text-gray-300 mx-auto mb-4" />

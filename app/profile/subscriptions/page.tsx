@@ -1,18 +1,63 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { ProtectedRoute } from "@/components/layout/protected-route"
 import { Navbar } from "@/components/layout/navbar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/components/providers/auth-provider"
-import { CreditCard, ArrowLeft, Users } from "lucide-react"
+import { CreditCard, ArrowLeft, Users, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { api } from "@/lib/api"
+import { useToast } from "@/hooks/use-toast"
+
+interface SubscriptionStatus {
+  success: boolean
+  isActive: boolean
+  subscription: {
+    _id: string
+    planName: string
+    amount: number
+    startDate: string
+    endDate: string
+    features: string[]
+  }
+}
 
 export default function SubscriptionsPage() {
   const { user } = useAuth()
   const router = useRouter()
+  const { toast } = useToast()
+  const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const loadSubscriptionStatus = async () => {
+      if (user?.role === "lawyer") {
+        try {
+          setLoading(true)
+          const response = await api.checkSubscriptionStatus()
+          setSubscriptionStatus(response)
+        } catch (error: any) {
+          toast({
+            title: "Error",
+            description: error.message || "Failed to load subscription status",
+            variant: "destructive",
+          })
+        } finally {
+          setLoading(false)
+        }
+      } else {
+        setLoading(false)
+      }
+    }
+
+    if (user) {
+      loadSubscriptionStatus()
+    }
+  }, [user, toast])
 
   return (
     <ProtectedRoute>
@@ -35,110 +80,129 @@ export default function SubscriptionsPage() {
           <div className="space-y-6">
             {user?.role === "lawyer" ? (
               <>
-                {/* Current Plan */}
-                <Card className="border-blue-200 bg-blue-50">
-                  <CardHeader>
-                    <CardTitle className="flex items-center text-blue-900">
-                      <CreditCard className="w-5 h-5 mr-2" />
-                      Current Plan
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-                      <div>
-                        <h3 className="text-xl font-semibold text-blue-900">Pro Plan</h3>
-                        <p className="text-blue-700">$49.00 per month</p>
-                        <p className="text-sm text-blue-600">Next billing: January 15, 2025</p>
-                      </div>
-                      <Badge className="bg-green-100 text-green-800 self-start sm:self-center mt-2 sm:mt-0">
-                        Active
-                      </Badge>
-                    </div>
+                {loading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-8 h-8 animate-spin" />
+                  </div>
+                ) : subscriptionStatus?.success ? (
+                  <>
+                    {/* Current Plan */}
+                    <Card className="border-blue-200 bg-blue-50">
+                      <CardHeader>
+                        <CardTitle className="flex items-center text-blue-900">
+                          <CreditCard className="w-5 h-5 mr-2" />
+                          Current Plan
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+                          <div>
+                            <h3 className="text-xl font-semibold text-blue-900">
+                              {subscriptionStatus.subscription.planName}
+                            </h3>
+                            <p className="text-blue-700">
+                              ${subscriptionStatus.subscription.amount.toFixed(2)} per month
+                            </p>
+                            <p className="text-sm text-blue-600">
+                              Next billing: {new Date(subscriptionStatus.subscription.endDate).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <Badge className="bg-green-100 text-green-800 self-start sm:self-center mt-2 sm:mt-0">
+                            {subscriptionStatus.isActive ? "Active" : "Inactive"}
+                          </Badge>
+                        </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-                      <div className="space-y-2 text-sm text-blue-800">
-                        <p>✓ 50 client consultations per month</p>
-                        <p>✓ Priority listing in search results</p>
-                        <p>✓ Advanced messaging features</p>
-                      </div>
-                      <div className="space-y-2 text-sm text-blue-800">
-                        <p>✓ Client management tools</p>
-                        <p>✓ Basic analytics dashboard</p>
-                        <p>✓ Email support</p>
-                      </div>
-                    </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                          <div className="space-y-2 text-sm text-blue-800">
+                            {subscriptionStatus.subscription.features.slice(0, 3).map((feature, index) => (
+                              <p key={index}>✓ {feature}</p>
+                            ))}
+                          </div>
+                          <div className="space-y-2 text-sm text-blue-800">
+                            {subscriptionStatus.subscription.features.slice(3).map((feature, index) => (
+                              <p key={index + 3}>✓ {feature}</p>
+                            ))}
+                          </div>
+                        </div>
 
-                    <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+                        <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+                          <Button asChild>
+                            <Link href="/subscription">Manage Plan</Link>
+                          </Button>
+                          <Button variant="outline" asChild>
+                            <Link href="/payment/invoice">View Invoice</Link>
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Usage Stats */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Usage This Month</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                          <div className="text-center p-4 bg-gray-50 rounded-lg">
+                            <div className="text-2xl font-bold text-blue-600">32</div>
+                            <div className="text-sm text-gray-600">Consultations</div>
+                            <div className="text-xs text-gray-500">18 remaining</div>
+                          </div>
+                          <div className="text-center p-4 bg-gray-50 rounded-lg">
+                            <div className="text-2xl font-bold text-green-600">18</div>
+                            <div className="text-sm text-gray-600">Active Clients</div>
+                            <div className="text-xs text-gray-500">+3 this week</div>
+                          </div>
+                          <div className="text-center p-4 bg-gray-50 rounded-lg">
+                            <div className="text-2xl font-bold text-purple-600">4.9</div>
+                            <div className="text-sm text-gray-600">Rating</div>
+                            <div className="text-xs text-gray-500">47 reviews</div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Billing History */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Billing History</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <div>
+                              <p className="font-medium">
+                                {subscriptionStatus.subscription.planName} - {new Date(subscriptionStatus.subscription.startDate).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                              </p>
+                              <p className="text-sm text-gray-600">
+                                Paid on {new Date(subscriptionStatus.subscription.startDate).toLocaleDateString()}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-medium">${subscriptionStatus.subscription.amount.toFixed(2)}</p>
+                              <Button variant="ghost" size="sm" asChild>
+                                <Link href="/payment/invoice">View</Link>
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </>
+                ) : (
+                  <Card>
+                    <CardContent className="p-8 text-center">
+                      <CreditCard className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">No Active Subscription</h3>
+                      <p className="text-gray-600 mb-4">
+                        You don't have an active subscription. Subscribe to access premium features.
+                      </p>
                       <Button asChild>
-                        <Link href="/subscription">Manage Plan</Link>
+                        <Link href="/subscription">Choose a Plan</Link>
                       </Button>
-                      <Button variant="outline" asChild>
-                        <Link href="/payment/invoice">View Invoice</Link>
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Usage Stats */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Usage This Month</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                      <div className="text-center p-4 bg-gray-50 rounded-lg">
-                        <div className="text-2xl font-bold text-blue-600">32</div>
-                        <div className="text-sm text-gray-600">Consultations</div>
-                        <div className="text-xs text-gray-500">18 remaining</div>
-                      </div>
-                      <div className="text-center p-4 bg-gray-50 rounded-lg">
-                        <div className="text-2xl font-bold text-green-600">18</div>
-                        <div className="text-sm text-gray-600">Active Clients</div>
-                        <div className="text-xs text-gray-500">+3 this week</div>
-                      </div>
-                      <div className="text-center p-4 bg-gray-50 rounded-lg">
-                        <div className="text-2xl font-bold text-purple-600">4.9</div>
-                        <div className="text-sm text-gray-600">Rating</div>
-                        <div className="text-xs text-gray-500">47 reviews</div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Billing History */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Billing History</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div>
-                          <p className="font-medium">Pro Plan - December 2024</p>
-                          <p className="text-sm text-gray-600">Paid on Dec 15, 2024</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-medium">$49.00</p>
-                          <Button variant="ghost" size="sm" asChild>
-                            <Link href="/payment/invoice">View</Link>
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div>
-                          <p className="font-medium">Pro Plan - November 2024</p>
-                          <p className="text-sm text-gray-600">Paid on Nov 15, 2024</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-medium">$49.00</p>
-                          <Button variant="ghost" size="sm" asChild>
-                            <Link href="/payment/invoice">View</Link>
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                )}
               </>
             ) : (
               /* Client Free Access */

@@ -61,6 +61,22 @@ export default function PostPage() {
     const fetchPostAndComments = async () => {
       try {
         const postId = params.id as string
+
+        // Validate that postId is a valid ObjectId format
+        if (!postId || postId === 'user' || postId.length !== 24 || !/^[0-9a-fA-F]{24}$/.test(postId)) {
+          toast({
+            title: "Invalid Post ID",
+            description: "The post ID in the URL is invalid. Please navigate from a valid post link.",
+            variant: "destructive",
+          })
+          // Redirect to community page after a short delay
+          setTimeout(() => {
+            router.push('/community')
+          }, 2000)
+          setLoading(false)
+          return
+        }
+
         const postResponse = await api.getSinglePost(postId)
         setPost(postResponse.post)
 
