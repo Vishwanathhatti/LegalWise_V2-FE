@@ -109,6 +109,9 @@ export default function MessagesPage() {
     socket.on("newMessage", (message: any) => {
       if (!message || !message.senderId) return
 
+      // Skip adding the message if it's from the current user (already added locally)
+      if (message.senderId._id === user?.id) return
+
       const normalizedMessage: Message = {
         ...message,
         _id: message._id || `temp-${Date.now()}`,
