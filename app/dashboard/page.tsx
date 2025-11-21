@@ -14,6 +14,58 @@ import { Bot, Users, Calendar, Star, Clock, DollarSign, FileText, UserCheck, Che
 import Link from "next/link"
 
 function UserDashboard() {
+  const [activeDMs, setActiveDMs] = useState<any[]>([])
+  const [recentConversations, setRecentConversations] = useState<any[]>([])
+  const [dashboardStats, setDashboardStats] = useState<any>(null)
+  const { user } = useAuth()
+
+  useEffect(() => {
+    fetchActiveDMs()
+    fetchRecentConversations()
+    fetchDashboardStats()
+  }, [])
+
+  const fetchActiveDMs = async () => {
+    try {
+      const res = await api.getDMs()
+      if (res.success) {
+        setActiveDMs(res.dms)
+      }
+    } catch (error) {
+      console.error("Error fetching active DMs:", error)
+    }
+  }
+
+  const fetchRecentConversations = async () => {
+    try {
+      const res = await api.getConversations()
+      if (res.success) {
+        // Sort by createdAt descending and take top 3
+        const sorted = res.allConversation.sort((a: any, b: any) => 
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        ).slice(0, 3)
+        setRecentConversations(sorted)
+      }
+    } catch (error) {
+      console.error("Error fetching recent conversations:", error)
+    }
+  }
+
+  const fetchDashboardStats = async () => {
+    try {
+      const res = await api.getUserDashboardStats()
+      if (res.success) {
+        setDashboardStats(res.stats)
+      }
+    } catch (error) {
+      console.error("Error fetching dashboard stats:", error)
+    }
+  }
+
+  const getOtherParticipant = (dm: any) => {
+    return dm.participants.find((p: any) => p._id !== user?.id)
+  }
+
   return (
     <div className="space-y-4 sm:space-y-6">
       <div className="px-1">
@@ -29,30 +81,30 @@ function UserDashboard() {
             <Bot className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">12</div>
-            <p className="text-xs text-muted-foreground">+2 from last week</p>
+            <div className="text-xl sm:text-2xl font-bold">{dashboardStats?.aiChats || 0}</div>
+            <p className="text-xs text-muted-foreground">Total conversations</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium">Community</CardTitle>
+            <CardTitle className="text-xs sm:text-sm font-medium">Community Posts</CardTitle>
             <Users className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">3</div>
-            <p className="text-xs text-muted-foreground">+1 this month</p>
+            <div className="text-xl sm:text-2xl font-bold">{dashboardStats?.posts || 0}</div>
+            <p className="text-xs text-muted-foreground">Total posts</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium">Bookings</CardTitle>
-            <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
+            <CardTitle className="text-xs sm:text-sm font-medium">Lawyers Connected</CardTitle>
+            <UserCheck className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">2</div>
-            <p className="text-xs text-muted-foreground">Next: Tomorrow</p>
+            <div className="text-xl sm:text-2xl font-bold">{dashboardStats?.connectedLawyers || 0}</div>
+            <p className="text-xs text-muted-foreground">Active connections</p>
           </CardContent>
         </Card>
 
@@ -62,8 +114,8 @@ function UserDashboard() {
             <FileText className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">8</div>
-            <p className="text-xs text-muted-foreground">This month</p>
+            <div className="text-xl sm:text-2xl font-bold">{dashboardStats?.documents || 0}</div>
+            <p className="text-xs text-muted-foreground">Total uploaded</p>
           </CardContent>
         </Card>
       </div>
@@ -76,59 +128,60 @@ function UserDashboard() {
             <CardDescription className="text-sm">Your latest AI assistant chats</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 sm:space-y-4">
-            <div className="flex items-center space-x-3 sm:space-x-4">
-              <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">Contract Review Help</p>
-                <p className="text-xs text-gray-500">2 hours ago</p>
-              </div>
-              <Button variant="ghost" size="sm" asChild className="flex-shrink-0">
-                <Link href="/chatbot">Continue</Link>
-              </Button>
-            </div>
-            <div className="flex items-center space-x-3 sm:space-x-4">
-              <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">Employment Law Query</p>
-                <p className="text-xs text-gray-500">1 day ago</p>
-              </div>
-              <Button variant="ghost" size="sm" asChild className="flex-shrink-0">
-                <Link href="/chatbot">Continue</Link>
-              </Button>
-            </div>
+            {recentConversations.length === 0 ? (
+              <p className="text-sm text-gray-500">No recent conversations</p>
+            ) : (
+              recentConversations.map((conv) => (
+                <div key={conv._id} className="flex items-center space-x-3 sm:space-x-4">
+                  <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{conv.title}</p>
+                    <p className="text-xs text-gray-500">
+                      {new Date(conv.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <Button variant="ghost" size="sm" asChild className="flex-shrink-0">
+                    <Link href={`/chatbot?conversationId=${conv._id}`}>Continue</Link>
+                  </Button>
+                </div>
+              ))
+            )}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg sm:text-xl">Upcoming Appointments</CardTitle>
-            <CardDescription className="text-sm">Your scheduled lawyer consultations</CardDescription>
+            <CardTitle className="text-lg sm:text-xl">Ongoing Consultations</CardTitle>
+            <CardDescription className="text-sm">Your ongoing lawyer consultations</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 sm:space-y-4">
-            <div className="flex items-center space-x-3 sm:space-x-4">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                <UserCheck className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">Sarah Johnson, Esq.</p>
-                <p className="text-xs text-gray-500">Tomorrow at 2:00 PM</p>
-                <Badge variant="secondary" className="text-xs mt-1">
-                  Contract Law
-                </Badge>
-              </div>
-            </div>
-            <div className="flex items-center space-x-3 sm:space-x-4">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                <UserCheck className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">Michael Chen, Esq.</p>
-                <p className="text-xs text-gray-500">Friday at 10:00 AM</p>
-                <Badge variant="secondary" className="text-xs mt-1">
-                  Family Law
-                </Badge>
-              </div>
-            </div>
+            {activeDMs.length === 0 ? (
+              <p className="text-sm text-gray-500">No active consultations</p>
+            ) : (
+              activeDMs.slice(0, 3).map((dm) => {
+                const otherParticipant = getOtherParticipant(dm)
+                const lastMessage = dm.messages?.[0]
+                return (
+                  <Link href={`/messages?dmId=${dm._id}`} key={dm._id}>
+                    <div className="flex items-center space-x-3 sm:space-x-4 hover:bg-gray-50 p-2 rounded-lg transition-colors cursor-pointer">
+                      <Avatar className="w-8 h-8 sm:w-10 sm:h-10">
+                        <AvatarImage src={otherParticipant?.profilePicture} />
+                        <AvatarFallback>{otherParticipant?.name?.charAt(0)}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{otherParticipant?.name}</p>
+                        <p className="text-xs text-gray-500 truncate">
+                          {lastMessage ? lastMessage.message : 'No messages yet'}
+                        </p>
+                      </div>
+                      <div className="text-xs text-gray-400 whitespace-nowrap">
+                        {lastMessage ? new Date(lastMessage.createdAt).toLocaleDateString() : ''}
+                      </div>
+                    </div>
+                  </Link>
+                )
+              })
+            )}
           </CardContent>
         </Card>
       </div>
@@ -176,9 +229,12 @@ function UserDashboard() {
 
 function LawyerDashboard() {
   const [dmRequests, setDmRequests] = useState<any[]>([])
+  const [lawyerProfile, setLawyerProfile] = useState<any>(null)
+  const [reviews, setReviews] = useState<any[]>([])
 
   useEffect(() => {
     fetchRequests()
+    fetchLawyerProfile()
   }, [])
 
   const fetchRequests = async () => {
@@ -189,6 +245,22 @@ function LawyerDashboard() {
       }
     } catch (error) {
       console.error("Error fetching DM requests:", error)
+    }
+  }
+
+  const fetchLawyerProfile = async () => {
+    try {
+      const res = await api.getLawyerProfile()
+      if (res.success && res.lawyer) {
+        setLawyerProfile(res.lawyer)
+        setReviews(res.lawyer.reviews || [])
+      } else if (res._id) {
+         // Handle case where response is the lawyer object directly (as per user's sample)
+         setLawyerProfile(res)
+         setReviews(res.reviews || [])
+      }
+    } catch (error) {
+      console.error("Error fetching lawyer profile:", error)
     }
   }
 
@@ -251,19 +323,19 @@ function LawyerDashboard() {
             <Users className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">18</div>
-            <p className="text-xs text-muted-foreground">+3 new this week</p>
+            <div className="text-xl sm:text-2xl font-bold">{lawyerProfile?.activeClients || 0}</div>
+            <p className="text-xs text-muted-foreground">Total accepted clients</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium">Consultations</CardTitle>
-            <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
+            <CardTitle className="text-xs sm:text-sm font-medium">Total Posts</CardTitle>
+            <FileText className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">32</div>
-            <p className="text-xs text-muted-foreground">This month</p>
+            <div className="text-xl sm:text-2xl font-bold">{lawyerProfile?.totalPosts || 0}</div>
+            <p className="text-xs text-muted-foreground">Community contributions</p>
           </CardContent>
         </Card>
 
@@ -273,8 +345,12 @@ function LawyerDashboard() {
             <Star className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">4.9</div>
-            <p className="text-xs text-muted-foreground">Based on 47 reviews</p>
+            <div className="text-xl sm:text-2xl font-bold">
+              {lawyerProfile?.rating ? lawyerProfile.rating.toFixed(1) : '0.0'}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Based on {lawyerProfile?.reviews?.length || 0} reviews
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -316,26 +392,47 @@ function LawyerDashboard() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg sm:text-xl">Performance</CardTitle>
-            <CardDescription className="text-sm">Your monthly statistics</CardDescription>
+            <CardTitle className="text-lg sm:text-xl">Reviews</CardTitle>
+            <CardDescription className="text-sm">Client Reviews</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3 sm:space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Response Rate</span>
-              <span className="text-sm font-medium">98%</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Avg. Response Time</span>
-              <span className="text-sm font-medium">2.3 hours</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Client Satisfaction</span>
-              <span className="text-sm font-medium">4.9/5</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Completion Rate</span>
-              <span className="text-sm font-medium">96%</span>
-            </div>
+          <CardContent className="space-y-3 sm:space-y-4 max-h-[400px] overflow-y-auto">
+            {reviews.length === 0 ? (
+              <p className="text-sm text-gray-500">No reviews yet</p>
+            ) : (
+              reviews.slice(0, 5).map((review, index) => (
+                <div key={index} className="border-b last:border-b-0 pb-3 last:pb-0">
+                  <div className="flex items-start space-x-3">
+                    <Avatar className="w-8 h-8 sm:w-10 sm:h-10">
+                      <AvatarImage src={review.userId?.profilePicture} />
+                      <AvatarFallback>{review.userId?.name?.charAt(0) || 'U'}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium">{review.userId?.name || 'Anonymous'}</p>
+                        <div className="flex items-center">
+                          {[...Array(5)].map((_, i) => (
+                            <Star
+                              key={i}
+                              className={`h-3 w-3 ${
+                                i < review.rating
+                                  ? 'fill-yellow-400 text-yellow-400'
+                                  : 'text-gray-300'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      {review.review && (
+                        <p className="text-xs text-gray-600 mt-1">{review.review}</p>
+                      )}
+                      <p className="text-xs text-gray-400 mt-1">
+                        {new Date(review.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
           </CardContent>
         </Card>
       </div>

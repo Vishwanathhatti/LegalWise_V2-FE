@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { ProtectedRoute } from "@/components/layout/protected-route"
 import { Navbar } from "@/components/layout/navbar"
 import { Button } from "@/components/ui/button"
@@ -50,10 +51,11 @@ interface Conversation {
   updatedAt: Date
 }
 
-
-
 export default function ChatbotPage() {
   const { user } = useAuth()
+  const searchParams = useSearchParams()
+  const initialConversationId = searchParams.get('conversationId')
+
   const [messages, setMessages] = useState<Message[]>([])
   const [inputValue, setInputValue] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -69,6 +71,25 @@ export default function ChatbotPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
 
+  const handleSelectConversation = async (conversationId: string) => {
+    console.log("Selecting conversation:", conversationId)
+    setActiveConversation(conversationId)
+    try {
+      const response = await api.getMessages(conversationId)
+      console.log("Get messages response:", response)
+      if (response.success) {
+        setMessages(response.conversation.messages.map((msg: any) => ({
+          _id: msg._id,
+          role: msg.role,
+          content: msg.content,
+          timestamp: new Date(msg.timestamp),
+        })))
+      }
+    } catch (error) {
+      console.error("Failed to load messages:", error)
+    }
+  }
+
   useEffect(() => {
     scrollToBottom()
   }, [messages])
@@ -76,9 +97,24 @@ export default function ChatbotPage() {
   useEffect(() => {
     const loadConversations = async () => {
       try {
+        console.log("Loading conversations...")
         const response = await api.getConversations()
         if (response.success) {
           setConversations(response.allConversation)
+          
+          // Auto-select conversation if query param exists
+          if (initialConversationId) {
+            console.log("Found initialConversationId:", initialConversationId)
+            // We need to wait for conversations to be set, but we can try to select it directly
+            // or check if it exists in the response
+            const targetConv = response.allConversation.find((c: Conversation) => c._id === initialConversationId)
+            if (targetConv) {
+              console.log("Found target conversation, selecting...")
+              handleSelectConversation(initialConversationId)
+            } else {
+              console.log("Target conversation not found in list")
+            }
+          }
         }
       } catch (error) {
         console.error("Failed to load conversations:", error)
@@ -86,7 +122,7 @@ export default function ChatbotPage() {
     }
 
     loadConversations()
-  }, [])
+  }, [initialConversationId])
 
   const handleSendMessage = async () => {
     if (!inputValue.trim() || !activeConversation) return
@@ -157,23 +193,6 @@ export default function ChatbotPage() {
       }
     } catch (error) {
       console.error("Failed to create conversation:", error)
-    }
-  }
-
-  const handleSelectConversation = async (conversationId: string) => {
-    setActiveConversation(conversationId)
-    try {
-      const response = await api.getMessages(conversationId)
-      if (response.success) {
-        setMessages(response.conversation.messages.map((msg: any) => ({
-          _id: msg._id,
-          role: msg.role,
-          content: msg.content,
-          timestamp: new Date(msg.timestamp),
-        })))
-      }
-    } catch (error) {
-      console.error("Failed to load messages:", error)
     }
   }
 

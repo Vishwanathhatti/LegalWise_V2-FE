@@ -109,6 +109,10 @@ class ApiClient {
     return response.user;
   }
 
+  async getUserDashboardStats(): Promise<{ success: boolean; stats: { aiChats: number; posts: number; connectedLawyers: number; documents: number } }> {
+    return this.request('/users/stats');
+  }
+
   async forgotPassword(email: string): Promise<{ success: boolean; message: string }> {
     return this.request('/users/forgot-password', {
       method: 'POST',

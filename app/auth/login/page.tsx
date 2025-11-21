@@ -100,36 +100,6 @@ export default function LoginPage() {
               </Button>
             </form>
 
-            <div className="mt-6">
-              <div className="text-center text-sm">
-                <span className="text-gray-600">Demo accounts:</span>
-              </div>
-              <div className="mt-2 space-y-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full bg-transparent"
-                  onClick={() => {
-                    setEmail("user@demo.com")
-                    setPassword("demo123")
-                  }}
-                >
-                  User Demo
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full bg-transparent"
-                  onClick={() => {
-                    setEmail("lawyer@demo.com")
-                    setPassword("demo123")
-                  }}
-                >
-                  Lawyer Demo
-                </Button>
-              </div>
-            </div>
-
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-600">
                 Don't have an account?{" "}

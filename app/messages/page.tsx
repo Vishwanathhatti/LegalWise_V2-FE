@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect, useMemo } from "react"
+import { useSearchParams } from "next/navigation"
 import { ProtectedRoute } from "@/components/layout/protected-route"
 import { Navbar } from "@/components/layout/navbar"
 import { Button } from "@/components/ui/button"
@@ -82,6 +83,9 @@ export default function MessagesPage() {
     scrollToBottom()
   }, [activeConversation?.messages])
 
+  const searchParams = useSearchParams()
+  const initialDmId = searchParams.get('dmId')
+
   // Load conversations on mount
   useEffect(() => {
     const loadConversations = async () => {
@@ -102,6 +106,14 @@ export default function MessagesPage() {
             socket.emit("joinRoom", dm._id)
           })
         }
+
+        // Auto-select conversation if dmId is present
+        if (initialDmId) {
+          const targetConversation = sortedConversations.find((c: Conversation) => c._id === initialDmId)
+          if (targetConversation) {
+            handleConversationSelect(targetConversation)
+          }
+        }
       } catch (error) {
         console.error("Failed to load conversations:", error)
         toast({
@@ -115,7 +127,7 @@ export default function MessagesPage() {
     }
 
     if (user) loadConversations()
-  }, [user, toast, socket])
+  }, [user, toast, socket, initialDmId])
 
   // Socket events
   useEffect(() => {
