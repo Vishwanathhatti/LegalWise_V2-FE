@@ -51,11 +51,14 @@ const practiceAreas = [
   "Employment Law",
   "Family Law",
   "Business Law",
+  "Corporate Law",
+  "Health Law",
+  "Labor Law",
   "Personal Injury",
   "Criminal Law",
   "Real Estate Law",
   "Immigration Law",
-  "Intellectual Property",
+  "Intellectual Property Law",
   "Tax Law",
 ]
 

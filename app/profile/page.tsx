@@ -33,6 +33,7 @@ import {
   Scale,
   GraduationCap,
   Award,
+  PenSquare,
 } from "lucide-react"
 import {
   Dialog,
@@ -96,6 +97,7 @@ interface Document {
 
 const profileTabs = [
   { id: "overview", label: "Overview", icon: User },
+  { id: "posts", label: "Posts", icon: PenSquare },
   { id: "liked", label: "Liked Posts", icon: Heart },
   { id: "documents", label: "Documents Summarized", icon: Bookmark },
   { id: "comments", label: "Comments", icon: MessageCircle },
@@ -135,6 +137,7 @@ export default function ProfilePage() {
   })
 
   // Collections
+  const [userPosts, setUserPosts] = useState<any[]>([])
   const [likedPosts, setLikedPosts] = useState<LikedPost[]>([])
   const [userComments, setUserComments] = useState<UserComment[]>([])
   const [documents, setDocuments] = useState<Document[]>([])
@@ -212,6 +215,24 @@ export default function ProfilePage() {
   }
 
   // Individual tab loaders
+  const loadUserPosts = async () => {
+    setLoadingData(true)
+    try {
+      if (user?.id) {
+        const res = await api.getUserPosts(user.id)
+        setUserPosts(res.userPosts || [])
+      }
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err?.message || "Failed to load posts",
+        variant: "destructive",
+      })
+    } finally {
+      setLoadingData(false)
+    }
+  }
+
   const loadLikedPosts = async () => {
     setLoadingData(true)
     try {
@@ -546,16 +567,18 @@ export default function ProfilePage() {
                                         <SelectValue placeholder="Add specialization" />
                                       </SelectTrigger>
                                       <SelectContent>
-                                        <SelectItem value="corporate">Corporate Law</SelectItem>
-                                        <SelectItem value="criminal">Criminal Law</SelectItem>
-                                        <SelectItem value="family">Family Law</SelectItem>
-                                        <SelectItem value="immigration">Immigration Law</SelectItem>
-                                        <SelectItem value="intellectual-property">Intellectual Property</SelectItem>
-                                        <SelectItem value="real-estate">Real Estate Law</SelectItem>
-                                        <SelectItem value="tax">Tax Law</SelectItem>
-                                        <SelectItem value="employment">Employment Law</SelectItem>
-                                        <SelectItem value="personal-injury">Personal Injury</SelectItem>
-                                        <SelectItem value="other">Other</SelectItem>
+                                        <SelectItem value="Corporate Law">Corporate Law</SelectItem>
+                                        <SelectItem value="Criminal Law">Criminal Law</SelectItem>
+                                        <SelectItem value="Family Law">Family Law</SelectItem>
+                                        <SelectItem value="Immigration Law">Immigration Law</SelectItem>
+                                        <SelectItem value="Intellectual Property Law">Intellectual Property Law</SelectItem>
+                                        <SelectItem value="Real Estate Law">Real Estate Law</SelectItem>
+                                        <SelectItem value="Tax Law">Tax Law</SelectItem>
+                                        <SelectItem value="Employment Law">Employment Law</SelectItem>
+                                        <SelectItem value="Personal Injury">Personal Injury</SelectItem>
+                                        <SelectItem value="Labor Law">Labor Law</SelectItem>
+                                        <SelectItem value="Health Law">Health Law</SelectItem>
+                                        <SelectItem value="Other">Other</SelectItem>
                                       </SelectContent>
                                     </Select>
                                   </div>
@@ -718,16 +741,18 @@ export default function ProfilePage() {
                                         <SelectValue placeholder="Add specialization" />
                                       </SelectTrigger>
                                       <SelectContent>
-                                        <SelectItem value="corporate">Corporate Law</SelectItem>
-                                        <SelectItem value="criminal">Criminal Law</SelectItem>
-                                        <SelectItem value="family">Family Law</SelectItem>
-                                        <SelectItem value="immigration">Immigration Law</SelectItem>
-                                        <SelectItem value="intellectual-property">Intellectual Property</SelectItem>
-                                        <SelectItem value="real-estate">Real Estate Law</SelectItem>
-                                        <SelectItem value="tax">Tax Law</SelectItem>
-                                        <SelectItem value="employment">Employment Law</SelectItem>
-                                        <SelectItem value="personal-injury">Personal Injury</SelectItem>
-                                        <SelectItem value="other">Other</SelectItem>
+                                        <SelectItem value="Corporate Law">Corporate Law</SelectItem>
+                                        <SelectItem value="Criminal Law">Criminal Law</SelectItem>
+                                        <SelectItem value="Family Law">Family Law</SelectItem>
+                                        <SelectItem value="Immigration Law">Immigration Law</SelectItem>
+                                        <SelectItem value="Intellectual Property Law">Intellectual Property Law</SelectItem>
+                                        <SelectItem value="Real Estate Law">Real Estate Law</SelectItem>
+                                        <SelectItem value="Tax Law">Tax Law</SelectItem>
+                                        <SelectItem value="Employment Law">Employment Law</SelectItem>
+                                        <SelectItem value="Personal Injury">Personal Injury</SelectItem>
+                                        <SelectItem value="Labor Law">Labor Law</SelectItem>
+                                        <SelectItem value="Health Law">Health Law</SelectItem>
+                                        <SelectItem value="Other">Other</SelectItem>
                                       </SelectContent>
                                     </Select>
                                   </div>
@@ -972,6 +997,77 @@ export default function ProfilePage() {
                 </CardContent>
               </Card>
             </div>
+          </div>
+        )
+
+      case "posts":
+        return (
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-semibold">Your Posts</h2>
+              <Badge variant="secondary">{userPosts.length} posts</Badge>
+            </div>
+
+            {loadingData ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin" />
+              </div>
+            ) : userPosts.length > 0 ? (
+              <div className="space-y-4">
+                {userPosts.map((post) => (
+                  <Card key={post._id} className="hover:shadow-md transition-shadow">
+                    <CardContent className="p-4">
+                      <div className="flex items-start space-x-3">
+                        <Avatar className="w-10 h-10">
+                          <AvatarImage alt={user?.name || "user"} />
+                          <AvatarFallback>{user?.name?.charAt(0) || "?"}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center space-x-2 mb-2">
+                            <h3 className="font-medium text-gray-900">{user?.name || "You"}</h3>
+                            <Badge variant="outline" className="text-xs">
+                              {post.tags?.[0] || "General"}
+                            </Badge>
+                            <span className="text-xs text-gray-500">
+                              {new Date(post.createdAt).toLocaleDateString()}
+                            </span>
+                          </div>
+                          <Link href={`/community/post/${post._id}`}>
+                            <h4 className="text-lg font-semibold text-gray-900 hover:text-blue-600 transition-colors mb-2">
+                              {post.title}
+                            </h4>
+                          </Link>
+                          <p className="text-gray-600 text-sm line-clamp-2 mb-3">
+                            {post.description}
+                          </p>
+                          <div className="flex items-center space-x-4 text-sm text-gray-500">
+                            <div className="flex items-center space-x-1">
+                              <Heart className="w-4 h-4" />
+                              <span>{post.likes?.length || 0}</span>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              <MessageCircle className="w-4 h-4" />
+                              <span>{post.comments?.length || 0}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <PenSquare className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No posts yet</h3>
+                  <p className="text-gray-600 mb-4">Share your legal questions and insights with the community</p>
+                  <Button asChild>
+                    <Link href="/community">Create Post</Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
           </div>
         )
 
@@ -1269,7 +1365,9 @@ export default function ProfilePage() {
 
   // Load tab-specific data when activeTab changes
   useEffect(() => {
-    if (activeTab === "liked" && likedPosts.length === 0) {
+    if (activeTab === "posts" && userPosts.length === 0) {
+      loadUserPosts()
+    } else if (activeTab === "liked" && likedPosts.length === 0) {
       loadLikedPosts()
     } else if (activeTab === "comments" && userComments.length === 0) {
       loadUserComments()
