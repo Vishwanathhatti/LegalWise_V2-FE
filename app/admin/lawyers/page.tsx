@@ -22,7 +22,7 @@ const lawyers = [
     registeredAt: "2024-01-10",
     rating: 4.9,
     cases: 45,
-    avatar: "/placeholder.svg",
+    avatar: undefined,
   },
   {
     id: 2,
@@ -33,7 +33,7 @@ const lawyers = [
     registeredAt: "2024-01-18",
     rating: 0,
     cases: 0,
-    avatar: "/placeholder.svg",
+    avatar: undefined,
   },
   {
     id: 3,
@@ -44,7 +44,7 @@ const lawyers = [
     registeredAt: "2024-01-05",
     rating: 4.7,
     cases: 32,
-    avatar: "/placeholder.svg",
+    avatar: undefined,
   },
   {
     id: 4,
@@ -55,7 +55,7 @@ const lawyers = [
     registeredAt: "2024-01-20",
     rating: 0,
     cases: 0,
-    avatar: "/placeholder.svg",
+    avatar: undefined,
   },
   {
     id: 5,
@@ -66,7 +66,7 @@ const lawyers = [
     registeredAt: "2024-01-12",
     rating: 4.8,
     cases: 28,
-    avatar: "/placeholder.svg",
+    avatar: undefined,
   },
 ]
 
@@ -192,7 +192,7 @@ export default function LawyerManagement() {
                     <TableCell>
                       <div className="flex items-center space-x-3">
                         <Avatar className="h-8 w-8">
-                          <AvatarImage src={lawyer.avatar || "/placeholder.svg"} alt={lawyer.name} />
+                          <AvatarImage src={lawyer.avatar} alt={lawyer.name} />
                           <AvatarFallback>{lawyer.name.charAt(0)}</AvatarFallback>
                         </Avatar>
                         <div>
@@ -261,7 +261,7 @@ export default function LawyerManagement() {
             <div className="space-y-6">
               <div className="flex items-center space-x-4">
                 <Avatar className="h-16 w-16">
-                  <AvatarImage src={selectedLawyer.avatar || "/placeholder.svg"} alt={selectedLawyer.name} />
+                  <AvatarImage src={selectedLawyer.avatar} alt={selectedLawyer.name} />
                   <AvatarFallback>{selectedLawyer.name.charAt(0)}</AvatarFallback>
                 </Avatar>
                 <div>

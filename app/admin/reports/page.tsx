@@ -17,9 +17,9 @@ const userReports = [
   {
     id: 1,
     reportedBy: "John Smith",
-    reportedByAvatar: "/placeholder.svg",
+    reportedByAvatar: undefined,
     reportedUser: "Mike Wilson",
-    reportedUserAvatar: "/placeholder.svg",
+    reportedUserAvatar: undefined,
     reason: "Inappropriate behavior",
     description: "User was being rude and unprofessional in messages",
     status: "Pending",
@@ -29,9 +29,9 @@ const userReports = [
   {
     id: 2,
     reportedBy: "Sarah Johnson",
-    reportedByAvatar: "/placeholder.svg",
+    reportedByAvatar: undefined,
     reportedUser: "Robert Taylor",
-    reportedUserAvatar: "/placeholder.svg",
+    reportedUserAvatar: undefined,
     reason: "Spam",
     description: "User is posting spam content repeatedly",
     status: "Resolved",
@@ -47,7 +47,7 @@ const flaggedContent = [
     type: "post",
     title: "This is misleading legal advice",
     author: "Anonymous User",
-    authorAvatar: "/placeholder.svg",
+    authorAvatar: undefined,
     reason: "Misinformation",
     flaggedBy: "System",
     status: "Pending",
@@ -59,7 +59,7 @@ const flaggedContent = [
     type: "comment",
     title: "Inappropriate language in comment",
     author: "Bad User",
-    authorAvatar: "/placeholder.svg",
+    authorAvatar: undefined,
     reason: "Inappropriate content",
     flaggedBy: "Community",
     status: "Pending",
@@ -71,7 +71,7 @@ const flaggedContent = [
     type: "post",
     title: "Spam promotional content",
     author: "Spammer",
-    authorAvatar: "/placeholder.svg",
+    authorAvatar: undefined,
     reason: "Spam",
     flaggedBy: "Auto-detection",
     status: "Resolved",
@@ -252,7 +252,7 @@ export default function ReportsAndFlags() {
                           <div className="flex items-center space-x-2">
                             <Avatar className="h-6 w-6">
                               <AvatarImage
-                                src={report.reportedByAvatar || "/placeholder.svg"}
+                                src={report.reportedByAvatar}
                                 alt={report.reportedBy}
                               />
                               <AvatarFallback>{report.reportedBy.charAt(0)}</AvatarFallback>
@@ -264,7 +264,7 @@ export default function ReportsAndFlags() {
                           <div className="flex items-center space-x-2">
                             <Avatar className="h-6 w-6">
                               <AvatarImage
-                                src={report.reportedUserAvatar || "/placeholder.svg"}
+                                src={report.reportedUserAvatar}
                                 alt={report.reportedUser}
                               />
                               <AvatarFallback>{report.reportedUser.charAt(0)}</AvatarFallback>
@@ -332,7 +332,7 @@ export default function ReportsAndFlags() {
                         <TableCell className="hidden md:table-cell">
                           <div className="flex items-center space-x-2">
                             <Avatar className="h-6 w-6">
-                              <AvatarImage src={content.authorAvatar || "/placeholder.svg"} alt={content.author} />
+                              <AvatarImage src={content.authorAvatar} alt={content.author} />
                               <AvatarFallback>{content.author.charAt(0)}</AvatarFallback>
                             </Avatar>
                             <span className="text-sm">{content.author}</span>
@@ -396,7 +396,7 @@ export default function ReportsAndFlags() {
                       <div className="flex items-center space-x-2 mt-1">
                         <Avatar className="h-6 w-6">
                           <AvatarImage
-                            src={selectedItem.reportedByAvatar || "/placeholder.svg"}
+                            src={selectedItem.reportedByAvatar}
                             alt={selectedItem.reportedBy}
                           />
                           <AvatarFallback>{selectedItem.reportedBy.charAt(0)}</AvatarFallback>
@@ -409,7 +409,7 @@ export default function ReportsAndFlags() {
                       <div className="flex items-center space-x-2 mt-1">
                         <Avatar className="h-6 w-6">
                           <AvatarImage
-                            src={selectedItem.reportedUserAvatar || "/placeholder.svg"}
+                            src={selectedItem.reportedUserAvatar}
                             alt={selectedItem.reportedUser}
                           />
                           <AvatarFallback>{selectedItem.reportedUser.charAt(0)}</AvatarFallback>
@@ -449,7 +449,7 @@ export default function ReportsAndFlags() {
                       <div className="flex items-center space-x-2 mt-1">
                         <Avatar className="h-6 w-6">
                           <AvatarImage
-                            src={selectedItem.authorAvatar || "/placeholder.svg"}
+                            src={selectedItem.authorAvatar}
                             alt={selectedItem.author}
                           />
                           <AvatarFallback>{selectedItem.author.charAt(0)}</AvatarFallback>

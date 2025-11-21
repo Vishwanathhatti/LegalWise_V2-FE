@@ -17,13 +17,7 @@ interface LoginResponse {
 interface UserResponse {
   success: boolean;
   message: string;
-  user: {
-    id: string;
-    name: string;
-    email: string;
-    phone: string;
-    role: string;
-  };
+  user: User;
 }
 
 interface User {
@@ -32,6 +26,10 @@ interface User {
   email: string;
   phone: string;
   role: string;
+  location?: string;
+  bio?: string;
+  joinDate?: string;
+  avatar?: string;
 }
 
 class ApiClient {
@@ -122,6 +120,14 @@ class ApiClient {
     return this.request(`/users/reset-password/${token}`, {
       method: 'POST',
       body: JSON.stringify({ newPassword }),
+    });
+  }
+
+  // Admin APIs
+  async adminLogin(email: string, password: string): Promise<LoginResponse> {
+    return this.request<LoginResponse>('/admin/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
     });
   }
 
@@ -247,6 +253,10 @@ class ApiClient {
     });
   }
 
+  async getPendingDMRequests(): Promise<{ success: boolean; requests: any[] }> {
+    return this.request('/dm/request/pending');
+  }
+
   async respondToDMRequest(requestId: string, status: 'accepted' | 'rejected'): Promise<any> {
     return this.request('/dm/request/respond', {
       method: 'POST',
@@ -309,6 +319,14 @@ class ApiClient {
 
   async getMessages(conversationId: string): Promise<{ success: boolean; conversation: any }> {
     return this.request(`/conversations/get/${conversationId}`);
+  }
+
+  // Rating APIs
+  async submitRating(lawyerId: string, ratingData: { rating: number; review: string }): Promise<{ success: boolean; message: string }> {
+    return this.request(`/lawyer/rate/${lawyerId}`, {
+      method: 'POST',
+      body: JSON.stringify(ratingData),
+    });
   }
 }
 

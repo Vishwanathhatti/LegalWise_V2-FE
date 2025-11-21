@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Bell, Moon, Search, Settings, Sun, User } from "lucide-react"
+import { Bell, Moon, Search, Settings, Sun, User, Menu } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -18,14 +18,24 @@ import { useAdminAuth } from "@/components/providers/admin-auth-provider"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 
-export function AdminHeader() {
+export function AdminHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) {
   const { setTheme } = useTheme()
   const { admin, adminLogout } = useAdminAuth()
   const [notifications] = useState(3)
 
   return (
     <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 h-16 flex items-center px-6">
-      <div className="flex-1 flex items-center">
+      <div className="flex-1 flex items-center gap-4">
+        {/* Sidebar toggle button for desktop/tablet */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onToggleSidebar}
+          className="hidden md:flex"
+        >
+          <Menu className="h-5 w-5" />
+        </Button>
+        
         <div className="relative md:w-64 hidden md:block">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
           <Input placeholder="Search..." className="pl-8 h-9" />
@@ -90,7 +100,7 @@ export function AdminHeader() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-9 flex items-center gap-2 pl-2 pr-4">
               <Avatar className="h-7 w-7">
-                <AvatarImage src={admin?.avatar || "/placeholder.svg"} alt={admin?.name || "Admin"} />
+                <AvatarImage alt={admin?.name || "Admin"} />
                 <AvatarFallback>
                   <User className="h-4 w-4" />
                 </AvatarFallback>

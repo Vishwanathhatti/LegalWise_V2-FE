@@ -27,6 +27,7 @@ const userNavItems = [
 const lawyerNavItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/community", label: "Community", icon: Users },
+  { href: "/chatbot", label: "AI Assistant", icon: Bot },
   { href: "/messages", label: "Messages", icon: MessageSquare },
   { href: "/subscription", label: "Subscription", icon: CreditCard },
   { href: "/summarizer", label: "Document AI", icon: FileText },
@@ -81,7 +82,7 @@ export function Navbar() {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={user.avatar || "/placeholder.svg"} alt={user.name} />
+                    <AvatarImage  alt={user.name} />
                     <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
                   </Avatar>
                 </Button>

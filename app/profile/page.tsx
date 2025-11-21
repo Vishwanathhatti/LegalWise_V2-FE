@@ -141,14 +141,16 @@ export default function ProfilePage() {
 
   // Lawyer registration state
   const [isLawyerDialogOpen, setIsLawyerDialogOpen] = useState<boolean>(false)
+  const [isUpdateLawyerDialogOpen, setIsUpdateLawyerDialogOpen] = useState<boolean>(false)
   const [registeringLawyer, setRegisteringLawyer] = useState<boolean>(false)
   const [lawyerForm, setLawyerForm] = useState({
-    licenseNumber: "",
-    specialization: "",
+    location: "",
+    specializations: [] as string[],
     yearsOfExperience: "",
-    barAssociation: "",
     education: "",
     bio: "",
+    languages: "",
+    consultationCharges: "",
   })
 
   // Load profile data on mount / when user changes
@@ -159,14 +161,14 @@ export default function ProfilePage() {
         const response = await api.getProfile()
         // Defensive: response might be nested; adjust if your API shape is different
         setProfileData({
-          name: response.name || response.user?.name || "",
-          email: response.email || response.user?.email || "",
-          phone: response.phone || response.user?.phone || "",
+          name: response.name || "",
+          email: response.email || "",
+          phone: response.phone || "",
           location: response.location || "",
           bio: response.bio || "",
           joinDate: response.joinDate ? new Date(response.joinDate) : new Date(),
           avatar: response.avatar || "",
-          role: (response.role || response.user?.role || "user") as "user" | "lawyer",
+          role: (response.role || "user") as "user" | "lawyer",
         })
 
         // Load activity stats after profile arrives
@@ -301,12 +303,13 @@ export default function ProfilePage() {
   const handleLawyerRegistration = async () => {
     // basic client-side validation
     if (
-      !lawyerForm.licenseNumber.trim() ||
-      !lawyerForm.specialization.trim() ||
+      !lawyerForm.location.trim() ||
+      lawyerForm.specializations.length === 0 ||
       !lawyerForm.yearsOfExperience.trim() ||
-      !lawyerForm.barAssociation.trim() ||
       !lawyerForm.education.trim() ||
-      !lawyerForm.bio.trim()
+      !lawyerForm.bio.trim() ||
+      !lawyerForm.languages.trim() ||
+      !lawyerForm.consultationCharges.trim()
     ) {
       toast({
         title: "Missing fields",
@@ -321,12 +324,13 @@ export default function ProfilePage() {
 
       // Prepare payload
       const payload = {
-        licenseNumber: lawyerForm.licenseNumber.trim(),
-        specialization: lawyerForm.specialization.trim(),
-        yearsOfExperience: Number(lawyerForm.yearsOfExperience),
-        barAssociation: lawyerForm.barAssociation.trim(),
+        location: lawyerForm.location.trim(),
+        specializations: lawyerForm.specializations,
+        experience: Number(lawyerForm.yearsOfExperience),
         education: lawyerForm.education.trim(),
         bio: lawyerForm.bio.trim(),
+        languages: lawyerForm.languages.split(",").map((l) => l.trim()).filter(Boolean),
+        consultationCharges: Number(lawyerForm.consultationCharges),
       }
 
       // Call backend API - adjust method name if your API differs
@@ -347,18 +351,96 @@ export default function ProfilePage() {
 
       // Reset form & close dialog
       setLawyerForm({
-        licenseNumber: "",
-        specialization: "",
+        location: "",
+        specializations: [],
         yearsOfExperience: "",
-        barAssociation: "",
         education: "",
         bio: "",
+        languages: "",
+        consultationCharges: "",
       })
       setIsLawyerDialogOpen(false)
     } catch (err: any) {
       toast({
         title: "Registration failed",
         description: err?.message || "Failed to register as a lawyer. Try again later.",
+        variant: "destructive",
+      })
+    } finally {
+      setRegisteringLawyer(false)
+    }
+  }
+
+  // Open update dialog and fetch current lawyer data
+  const openUpdateLawyerDialog = async () => {
+    try {
+      setLoadingData(true)
+      const res = await api.getLawyerProfile()
+      if (res) {
+        setLawyerForm({
+          location: res.location || "",
+          specializations: res.specializations || [],
+          yearsOfExperience: res.experience?.toString() || "",
+          education: res.education || "",
+          bio: res.bio || "",
+          languages: res.languages?.join(", ") || "",
+          consultationCharges: res.consultationCharges?.toString() || "",
+        })
+        setIsUpdateLawyerDialogOpen(true)
+      }
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: "Failed to load lawyer profile details.",
+        variant: "destructive",
+      })
+    } finally {
+      setLoadingData(false)
+    }
+  }
+
+  // Update lawyer profile handler
+  const handleUpdateLawyerProfile = async () => {
+    if (
+      !lawyerForm.location.trim() ||
+      lawyerForm.specializations.length === 0 ||
+      !lawyerForm.yearsOfExperience.trim() ||
+      !lawyerForm.education.trim() ||
+      !lawyerForm.bio.trim() ||
+      !lawyerForm.languages.trim() ||
+      !lawyerForm.consultationCharges.trim()
+    ) {
+      toast({
+        title: "Missing fields",
+        description: "Please fill all required fields.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      setRegisteringLawyer(true) // Reuse loading state
+      const payload = {
+        location: lawyerForm.location.trim(),
+        specializations: lawyerForm.specializations,
+        experience: Number(lawyerForm.yearsOfExperience),
+        education: lawyerForm.education.trim(),
+        bio: lawyerForm.bio.trim(),
+        languages: lawyerForm.languages.split(",").map((l) => l.trim()).filter(Boolean),
+        consultationCharges: Number(lawyerForm.consultationCharges),
+      }
+
+      await api.updateLawyerProfile(payload)
+
+      toast({
+        title: "Profile updated",
+        description: "Your lawyer profile has been updated successfully.",
+      })
+      setIsUpdateLawyerDialogOpen(false)
+    } catch (err: any) {
+      toast({
+        title: "Update failed",
+        description: err?.message || "Failed to update lawyer profile.",
         variant: "destructive",
       })
     } finally {
@@ -385,7 +467,7 @@ export default function ProfilePage() {
               <CardContent className="p-6">
                 <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-6">
                   <Avatar className="w-24 h-24">
-                    <AvatarImage src={profileData.avatar || "/placeholder.svg"} alt={profileData.name || "avatar"} />
+                    <AvatarImage src={profileData.avatar} alt={profileData.name || "avatar"} />
                     <AvatarFallback className="text-2xl">{(profileData.name && profileData.name.charAt(0)) || "?"}</AvatarFallback>
                   </Avatar>
 
@@ -419,25 +501,49 @@ export default function ProfilePage() {
                                 </DialogDescription>
                               </DialogHeader>
 
-                              <div className="grid gap-4 py-4">
+                              <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto px-1">
                                 <div className="grid grid-cols-2 gap-4">
                                   <div className="space-y-2">
-                                    <Label htmlFor="licenseNumber">License Number *</Label>
+                                    <Label htmlFor="location">Location *</Label>
                                     <Input
-                                      id="licenseNumber"
-                                      placeholder="Enter your bar license number"
-                                      value={lawyerForm.licenseNumber}
-                                      onChange={(e) => setLawyerForm({ ...lawyerForm, licenseNumber: e.target.value })}
+                                      id="location"
+                                      placeholder="City, Country"
+                                      value={lawyerForm.location}
+                                      onChange={(e) => setLawyerForm({ ...lawyerForm, location: e.target.value })}
                                     />
                                   </div>
                                   <div className="space-y-2">
-                                    <Label htmlFor="specialization">Specialization *</Label>
+                                    <Label>Specializations *</Label>
+                                    <div className="flex flex-wrap gap-2 mb-2">
+                                      {lawyerForm.specializations.map((spec) => (
+                                        <Badge
+                                          key={spec}
+                                          variant="secondary"
+                                          className="cursor-pointer hover:bg-destructive hover:text-destructive-foreground"
+                                          onClick={() =>
+                                            setLawyerForm((prev) => ({
+                                              ...prev,
+                                              specializations: prev.specializations.filter((s) => s !== spec),
+                                            }))
+                                          }
+                                        >
+                                          {spec} <X className="w-3 h-3 ml-1" />
+                                        </Badge>
+                                      ))}
+                                    </div>
                                     <Select
-                                      value={lawyerForm.specialization}
-                                      onValueChange={(value) => setLawyerForm({ ...lawyerForm, specialization: value })}
+                                      value=""
+                                      onValueChange={(value) => {
+                                        if (!lawyerForm.specializations.includes(value)) {
+                                          setLawyerForm((prev) => ({
+                                            ...prev,
+                                            specializations: [...prev.specializations, value],
+                                          }))
+                                        }
+                                      }}
                                     >
                                       <SelectTrigger>
-                                        <SelectValue placeholder="Select specialization" />
+                                        <SelectValue placeholder="Add specialization" />
                                       </SelectTrigger>
                                       <SelectContent>
                                         <SelectItem value="corporate">Corporate Law</SelectItem>
@@ -468,14 +574,26 @@ export default function ProfilePage() {
                                     />
                                   </div>
                                   <div className="space-y-2">
-                                    <Label htmlFor="barAssociation">Bar Association *</Label>
+                                    <Label htmlFor="consultationCharges">Consultation Charges ($) *</Label>
                                     <Input
-                                      id="barAssociation"
-                                      placeholder="e.g., State Bar of California"
-                                      value={lawyerForm.barAssociation}
-                                      onChange={(e) => setLawyerForm({ ...lawyerForm, barAssociation: e.target.value })}
+                                      id="consultationCharges"
+                                      type="number"
+                                      min={0}
+                                      placeholder="e.g., 150"
+                                      value={lawyerForm.consultationCharges}
+                                      onChange={(e) => setLawyerForm({ ...lawyerForm, consultationCharges: e.target.value })}
                                     />
                                   </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                  <Label htmlFor="languages">Languages (comma separated) *</Label>
+                                  <Input
+                                    id="languages"
+                                    placeholder="e.g., English, Spanish, French"
+                                    value={lawyerForm.languages}
+                                    onChange={(e) => setLawyerForm({ ...lawyerForm, languages: e.target.value })}
+                                  />
                                 </div>
 
                                 <div className="space-y-2">
@@ -512,12 +630,13 @@ export default function ProfilePage() {
                                   onClick={handleLawyerRegistration}
                                   disabled={
                                     registeringLawyer ||
-                                    !lawyerForm.licenseNumber ||
-                                    !lawyerForm.specialization ||
+                                    !lawyerForm.location ||
+                                    lawyerForm.specializations.length === 0 ||
                                     !lawyerForm.yearsOfExperience ||
-                                    !lawyerForm.barAssociation ||
                                     !lawyerForm.education ||
-                                    !lawyerForm.bio
+                                    !lawyerForm.bio ||
+                                    !lawyerForm.languages ||
+                                    !lawyerForm.consultationCharges
                                   }
                                 >
                                   {registeringLawyer ? (
@@ -529,6 +648,178 @@ export default function ProfilePage() {
                                     <>
                                       <Scale className="w-4 h-4 mr-2" />
                                       Register as Lawyer
+                                    </>
+                                  )}
+                                </Button>
+                              </DialogFooter>
+                            </DialogContent>
+                          </Dialog>
+                        )}
+
+                        {/* Update Lawyer Profile Button */}
+                        {profileData.role === "lawyer" && (
+                          <Dialog open={isUpdateLawyerDialogOpen} onOpenChange={setIsUpdateLawyerDialogOpen}>
+                            <DialogTrigger asChild>
+                              <Button variant="outline" className="mt-4 sm:mt-0" onClick={openUpdateLawyerDialog}>
+                                <Scale className="w-4 h-4 mr-2" />
+                                Update Lawyer Profile
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-[600px]">
+                              <DialogHeader>
+                                <DialogTitle>Update Lawyer Profile</DialogTitle>
+                                <DialogDescription>
+                                  Update your professional details and expertise.
+                                </DialogDescription>
+                              </DialogHeader>
+
+                              <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto px-1">
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div className="space-y-2">
+                                    <Label htmlFor="upd-location">Location *</Label>
+                                    <Input
+                                      id="upd-location"
+                                      placeholder="City, Country"
+                                      value={lawyerForm.location}
+                                      onChange={(e) => setLawyerForm({ ...lawyerForm, location: e.target.value })}
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label>Specializations *</Label>
+                                    <div className="flex flex-wrap gap-2 mb-2">
+                                      {lawyerForm.specializations.map((spec) => (
+                                        <Badge
+                                          key={spec}
+                                          variant="secondary"
+                                          className="cursor-pointer hover:bg-destructive hover:text-destructive-foreground"
+                                          onClick={() =>
+                                            setLawyerForm((prev) => ({
+                                              ...prev,
+                                              specializations: prev.specializations.filter((s) => s !== spec),
+                                            }))
+                                          }
+                                        >
+                                          {spec} <X className="w-3 h-3 ml-1" />
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                    <Select
+                                      value=""
+                                      onValueChange={(value) => {
+                                        if (!lawyerForm.specializations.includes(value)) {
+                                          setLawyerForm((prev) => ({
+                                            ...prev,
+                                            specializations: [...prev.specializations, value],
+                                          }))
+                                        }
+                                      }}
+                                    >
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Add specialization" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="corporate">Corporate Law</SelectItem>
+                                        <SelectItem value="criminal">Criminal Law</SelectItem>
+                                        <SelectItem value="family">Family Law</SelectItem>
+                                        <SelectItem value="immigration">Immigration Law</SelectItem>
+                                        <SelectItem value="intellectual-property">Intellectual Property</SelectItem>
+                                        <SelectItem value="real-estate">Real Estate Law</SelectItem>
+                                        <SelectItem value="tax">Tax Law</SelectItem>
+                                        <SelectItem value="employment">Employment Law</SelectItem>
+                                        <SelectItem value="personal-injury">Personal Injury</SelectItem>
+                                        <SelectItem value="other">Other</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div className="space-y-2">
+                                    <Label htmlFor="upd-yearsOfExperience">Years of Experience *</Label>
+                                    <Input
+                                      id="upd-yearsOfExperience"
+                                      type="number"
+                                      min={0}
+                                      placeholder="e.g., 5"
+                                      value={lawyerForm.yearsOfExperience}
+                                      onChange={(e) => setLawyerForm({ ...lawyerForm, yearsOfExperience: e.target.value })}
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label htmlFor="upd-consultationCharges">Consultation Charges ($) *</Label>
+                                    <Input
+                                      id="upd-consultationCharges"
+                                      type="number"
+                                      min={0}
+                                      placeholder="e.g., 150"
+                                      value={lawyerForm.consultationCharges}
+                                      onChange={(e) => setLawyerForm({ ...lawyerForm, consultationCharges: e.target.value })}
+                                    />
+                                  </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                  <Label htmlFor="upd-languages">Languages (comma separated) *</Label>
+                                  <Input
+                                    id="upd-languages"
+                                    placeholder="e.g., English, Spanish, French"
+                                    value={lawyerForm.languages}
+                                    onChange={(e) => setLawyerForm({ ...lawyerForm, languages: e.target.value })}
+                                  />
+                                </div>
+
+                                <div className="space-y-2">
+                                  <Label htmlFor="upd-education">Education *</Label>
+                                  <Input
+                                    id="upd-education"
+                                    placeholder="e.g., JD from Harvard Law School"
+                                    value={lawyerForm.education}
+                                    onChange={(e) => setLawyerForm({ ...lawyerForm, education: e.target.value })}
+                                  />
+                                </div>
+
+                                <div className="space-y-2">
+                                  <Label htmlFor="upd-lawyerBio">Professional Bio *</Label>
+                                  <Textarea
+                                    id="upd-lawyerBio"
+                                    placeholder="Describe your legal background..."
+                                    rows={4}
+                                    value={lawyerForm.bio}
+                                    onChange={(e) => setLawyerForm({ ...lawyerForm, bio: e.target.value })}
+                                  />
+                                </div>
+                              </div>
+
+                              <DialogFooter>
+                                <Button
+                                  variant="outline"
+                                  onClick={() => setIsUpdateLawyerDialogOpen(false)}
+                                  disabled={registeringLawyer}
+                                >
+                                  Cancel
+                                </Button>
+                                <Button
+                                  onClick={handleUpdateLawyerProfile}
+                                  disabled={
+                                    registeringLawyer ||
+                                    !lawyerForm.location ||
+                                    lawyerForm.specializations.length === 0 ||
+                                    !lawyerForm.yearsOfExperience ||
+                                    !lawyerForm.education ||
+                                    !lawyerForm.bio ||
+                                    !lawyerForm.languages ||
+                                    !lawyerForm.consultationCharges
+                                  }
+                                >
+                                  {registeringLawyer ? (
+                                    <>
+                                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                      Updating...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Save className="w-4 h-4 mr-2" />
+                                      Update Profile
                                     </>
                                   )}
                                 </Button>
@@ -703,7 +994,7 @@ export default function ProfilePage() {
                     <CardContent className="p-4">
                       <div className="flex items-start space-x-3">
                         <Avatar className="w-10 h-10">
-                          <AvatarImage src="/placeholder.svg" alt={post.author.name} />
+                          <AvatarImage alt={post.author.name} />
                           <AvatarFallback>{post.author.name.charAt(0)}</AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">
@@ -829,7 +1120,7 @@ export default function ProfilePage() {
                     <CardContent className="p-4">
                       <div className="flex items-start space-x-3">
                         <Avatar className="w-8 h-8">
-                          <AvatarImage src="/placeholder.svg" alt={user?.name || "user"} />
+                          <AvatarImage alt={user?.name || "user"} />
                           <AvatarFallback>{user?.name?.charAt(0) || "?"}</AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">

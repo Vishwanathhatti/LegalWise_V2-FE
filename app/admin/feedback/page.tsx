@@ -20,7 +20,7 @@ const feedbackData = [
     message:
       "The search function is not working properly on mobile devices. It keeps crashing when I try to search for lawyers.",
     submittedBy: "John Smith",
-    submitterAvatar: "/placeholder.svg",
+    submitterAvatar: undefined,
     submitterEmail: "john.smith@email.com",
     date: "2024-01-20T10:30:00Z",
     status: "Pending",
@@ -33,7 +33,7 @@ const feedbackData = [
     message:
       "It would be great to have a dark mode option for the platform. Many users prefer dark themes for better eye comfort.",
     submittedBy: "Sarah Johnson",
-    submitterAvatar: "/placeholder.svg",
+    submitterAvatar: undefined,
     submitterEmail: "sarah.johnson@email.com",
     date: "2024-01-19T14:20:00Z",
     status: "Resolved",
@@ -46,7 +46,7 @@ const feedbackData = [
     message:
       "The platform is excellent! The AI assistant is very helpful and the lawyer matching system works perfectly.",
     submittedBy: "Michael Chen",
-    submitterAvatar: "/placeholder.svg",
+    submitterAvatar: undefined,
     submitterEmail: "michael.chen@email.com",
     date: "2024-01-18T09:15:00Z",
     status: "Resolved",
@@ -58,7 +58,7 @@ const feedbackData = [
     category: "Technical Issue",
     message: "I'm having trouble uploading documents. The upload keeps failing with large PDF files over 5MB.",
     submittedBy: "Emily Davis",
-    submitterAvatar: "/placeholder.svg",
+    submitterAvatar: undefined,
     submitterEmail: "emily.davis@email.com",
     date: "2024-01-17T16:45:00Z",
     status: "Pending",
@@ -71,7 +71,7 @@ const feedbackData = [
     message:
       "Please add a notification system for new messages and updates. Email notifications would be very helpful.",
     submittedBy: "Robert Wilson",
-    submitterAvatar: "/placeholder.svg",
+    submitterAvatar: undefined,
     submitterEmail: "robert.wilson@email.com",
     date: "2024-01-16T11:30:00Z",
     status: "Pending",
@@ -286,7 +286,7 @@ export default function FeedbackAndSupport() {
                       <div className="flex items-center space-x-2">
                         <Avatar className="h-6 w-6">
                           <AvatarImage
-                            src={feedback.submitterAvatar || "/placeholder.svg"}
+                            src={feedback.submitterAvatar}
                             alt={feedback.submittedBy}
                           />
                           <AvatarFallback>{feedback.submittedBy.charAt(0)}</AvatarFallback>
@@ -340,7 +340,7 @@ export default function FeedbackAndSupport() {
               <div className="flex items-start space-x-4">
                 <Avatar className="h-10 w-10">
                   <AvatarImage
-                    src={selectedFeedback.submitterAvatar || "/placeholder.svg"}
+                    src={selectedFeedback.submitterAvatar}
                     alt={selectedFeedback.submittedBy}
                   />
                   <AvatarFallback>{selectedFeedback.submittedBy.charAt(0)}</AvatarFallback>

@@ -18,7 +18,7 @@ const aiConversations = [
     id: 1,
     userId: 1,
     userName: "John Smith",
-    userAvatar: "/placeholder.svg",
+    userAvatar: undefined,
     messageCount: 15,
     lastMessage: "Thank you for the contract advice!",
     lastMessageTime: "2024-01-20T14:30:00Z",
@@ -29,7 +29,7 @@ const aiConversations = [
     id: 2,
     userId: 2,
     userName: "Sarah Johnson",
-    userAvatar: "/placeholder.svg",
+    userAvatar: undefined,
     messageCount: 8,
     lastMessage: "Can you help me understand employment rights?",
     lastMessageTime: "2024-01-20T12:15:00Z",
@@ -40,7 +40,7 @@ const aiConversations = [
     id: 3,
     userId: 3,
     userName: "Mike Wilson",
-    userAvatar: "/placeholder.svg",
+    userAvatar: undefined,
     messageCount: 23,
     lastMessage: "This AI is giving wrong legal advice!",
     lastMessageTime: "2024-01-20T10:45:00Z",
@@ -54,7 +54,7 @@ const directMessages = [
   {
     id: 1,
     participants: ["John Smith", "Sarah Johnson"],
-    participantAvatars: ["/placeholder.svg", "/placeholder.svg"],
+    participantAvatars: [undefined, undefined],
     messageCount: 12,
     lastMessage: "Thanks for the consultation!",
     lastMessageTime: "2024-01-20T16:20:00Z",
@@ -63,7 +63,7 @@ const directMessages = [
   {
     id: 2,
     participants: ["Mike Wilson", "Emily Davis"],
-    participantAvatars: ["/placeholder.svg", "/placeholder.svg"],
+    participantAvatars: [undefined, undefined],
     messageCount: 5,
     lastMessage: "When can we schedule the meeting?",
     lastMessageTime: "2024-01-20T11:30:00Z",
@@ -72,7 +72,7 @@ const directMessages = [
   {
     id: 3,
     participants: ["Robert Taylor", "Lisa Anderson"],
-    participantAvatars: ["/placeholder.svg", "/placeholder.svg"],
+    participantAvatars: [undefined, undefined],
     messageCount: 8,
     lastMessage: "This is inappropriate content",
     lastMessageTime: "2024-01-19T18:45:00Z",
@@ -227,7 +227,7 @@ export default function ConversationsManagement() {
                           <div className="flex items-center space-x-3">
                             <Avatar className="h-8 w-8">
                               <AvatarImage
-                                src={conversation.userAvatar || "/placeholder.svg"}
+                                src={conversation.userAvatar}
                                 alt={conversation.userName}
                               />
                               <AvatarFallback>{conversation.userName.charAt(0)}</AvatarFallback>
@@ -298,7 +298,7 @@ export default function ConversationsManagement() {
                             <div className="flex -space-x-2">
                               {dm.participantAvatars.map((avatar, index) => (
                                 <Avatar key={index} className="h-6 w-6 border-2 border-white">
-                                  <AvatarImage src={avatar || "/placeholder.svg"} alt={dm.participants[index]} />
+                                  <AvatarImage src={avatar} alt={dm.participants[index]} />
                                   <AvatarFallback>{dm.participants[index].charAt(0)}</AvatarFallback>
                                 </Avatar>
                               ))}
@@ -357,7 +357,7 @@ export default function ConversationsManagement() {
                   <div className="flex items-center space-x-3 mb-4">
                     <Avatar className="h-10 w-10">
                       <AvatarImage
-                        src={selectedConversation.userAvatar || "/placeholder.svg"}
+                        src={selectedConversation.userAvatar}
                         alt={selectedConversation.userName}
                       />
                       <AvatarFallback>{selectedConversation.userName.charAt(0)}</AvatarFallback>
@@ -386,7 +386,7 @@ export default function ConversationsManagement() {
                       {selectedConversation.participantAvatars.map((avatar: string, index: number) => (
                         <Avatar key={index} className="h-8 w-8 border-2 border-white">
                           <AvatarImage
-                            src={avatar || "/placeholder.svg"}
+                            src={avatar}
                             alt={selectedConversation.participants[index]}
                           />
                           <AvatarFallback>{selectedConversation.participants[index].charAt(0)}</AvatarFallback>

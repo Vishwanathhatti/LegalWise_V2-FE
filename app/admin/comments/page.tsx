@@ -16,7 +16,7 @@ const comments = [
     postId: 1,
     postTitle: "Understanding Employment Contracts in 2024",
     author: "John Smith",
-    authorAvatar: "/placeholder.svg",
+    authorAvatar: undefined,
     content: "This is really helpful! I had no idea about these new regulations.",
     createdAt: "2024-01-20T10:30:00Z",
     flagged: false,
@@ -24,7 +24,7 @@ const comments = [
       {
         id: 11,
         author: "Sarah Johnson",
-        authorAvatar: "/placeholder.svg",
+        authorAvatar: undefined,
         content: "Glad you found it useful! Feel free to ask if you have any questions.",
         createdAt: "2024-01-20T11:15:00Z",
         flagged: false,
@@ -36,7 +36,7 @@ const comments = [
     postId: 1,
     postTitle: "Understanding Employment Contracts in 2024",
     author: "Mike Wilson",
-    authorAvatar: "/placeholder.svg",
+    authorAvatar: undefined,
     content: "I disagree with some of these points. The implementation seems rushed.",
     createdAt: "2024-01-20T09:45:00Z",
     flagged: true,
@@ -47,7 +47,7 @@ const comments = [
     postId: 2,
     postTitle: "New Real Estate Laws: What You Need to Know",
     author: "Emma Davis",
-    authorAvatar: "/placeholder.svg",
+    authorAvatar: undefined,
     content: "Great breakdown of the new laws. This will definitely impact my upcoming purchase.",
     createdAt: "2024-01-19T16:20:00Z",
     flagged: false,
@@ -55,7 +55,7 @@ const comments = [
       {
         id: 31,
         author: "Michael Chen",
-        authorAvatar: "/placeholder.svg",
+        authorAvatar: undefined,
         content: "Make sure to consult with a real estate attorney before proceeding.",
         createdAt: "2024-01-19T17:00:00Z",
         flagged: false,
@@ -63,7 +63,7 @@ const comments = [
       {
         id: 32,
         author: "Lisa Brown",
-        authorAvatar: "/placeholder.svg",
+        authorAvatar: undefined,
         content: "I can recommend a good attorney if you need one.",
         createdAt: "2024-01-19T17:30:00Z",
         flagged: false,
@@ -75,7 +75,7 @@ const comments = [
     postId: 3,
     postTitle: "Family Law Updates and Recent Court Decisions",
     author: "Robert Taylor",
-    authorAvatar: "/placeholder.svg",
+    authorAvatar: undefined,
     content: "This is completely wrong and misleading information!",
     createdAt: "2024-01-18T14:10:00Z",
     flagged: true,
@@ -204,7 +204,7 @@ export default function CommentsModeration() {
                 {/* Main Comment */}
                 <div className="flex items-start space-x-3">
                   <Avatar className="h-8 w-8 flex-shrink-0">
-                    <AvatarImage src={comment.authorAvatar || "/placeholder.svg"} alt={comment.author} />
+                    <AvatarImage src={comment.authorAvatar} alt={comment.author} />
                     <AvatarFallback>{comment.author.charAt(0)}</AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
@@ -250,7 +250,7 @@ export default function CommentsModeration() {
                     {comment.replies.map((reply) => (
                       <div key={reply.id} className="flex items-start space-x-3">
                         <Avatar className="h-6 w-6 flex-shrink-0">
-                          <AvatarImage src={reply.authorAvatar || "/placeholder.svg"} alt={reply.author} />
+                          <AvatarImage src={reply.authorAvatar} alt={reply.author} />
                           <AvatarFallback>{reply.author.charAt(0)}</AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">

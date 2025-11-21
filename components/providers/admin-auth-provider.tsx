@@ -6,17 +6,19 @@ import { createContext, useContext, useState, useEffect } from "react"
 import { useRouter, usePathname } from "next/navigation"
 
 interface AdminUser {
-  id: string
+  _id: string
   name: string
   email: string
-  role: "admin" | "super_admin"
-  avatar?: string
+  phone: string
+  role: string
+  profilePicture?: string
+  lawyerId?: any
 }
 
 interface AdminAuthContextType {
   admin: AdminUser | null
-  adminLogin: (email: string, password: string) => Promise<void>
   adminLogout: () => void
+  adminLogin: (data: { user: AdminUser; token: string }) => void
   isLoading: boolean
 }
 
@@ -29,10 +31,22 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
 
   useEffect(() => {
-    // Simulate checking for existing admin session
-    const savedAdmin = localStorage.getItem("legalwise_admin")
-    if (savedAdmin) {
-      setAdmin(JSON.parse(savedAdmin))
+    // Check for existing admin session
+    const token = localStorage.getItem("legalwise_token")
+    const savedUser = localStorage.getItem("legalwise_user")
+    
+    if (token && savedUser) {
+      try {
+        const user = JSON.parse(savedUser)
+        // Only set admin if user has admin role
+        if (user.role === "admin") {
+          setAdmin(user)
+        }
+      } catch (error) {
+        console.error("Error parsing user data:", error)
+        localStorage.removeItem("legalwise_token")
+        localStorage.removeItem("legalwise_user")
+      }
     }
     setIsLoading(false)
   }, [])
@@ -52,38 +66,22 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [admin, isLoading, pathname, router])
 
-  const adminLogin = async (email: string, password: string) => {
-    setIsLoading(true)
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-
-    // Simple validation - in a real app, this would be a server-side check
-    if (email.includes("admin") && password.length >= 6) {
-      const mockAdmin: AdminUser = {
-        id: "admin1",
-        name: "Admin User",
-        email,
-        role: email.includes("super") ? "super_admin" : "admin",
-        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
-      }
-
-      setAdmin(mockAdmin)
-      localStorage.setItem("legalwise_admin", JSON.stringify(mockAdmin))
-      setIsLoading(false)
-    } else {
-      setIsLoading(false)
-      throw new Error("Invalid credentials")
-    }
+  const adminLogin = (data: { user: AdminUser; token: string }) => {
+    setAdmin(data.user)
+    localStorage.setItem("legalwise_token", data.token)
+    localStorage.setItem("legalwise_user", JSON.stringify(data.user))
+    router.push("/admin")
   }
 
   const adminLogout = () => {
     setAdmin(null)
-    localStorage.removeItem("legalwise_admin")
+    localStorage.removeItem("legalwise_token")
+    localStorage.removeItem("legalwise_user")
     router.push("/admin/login")
   }
 
   return (
-    <AdminAuthContext.Provider value={{ admin, adminLogin, adminLogout, isLoading }}>
+    <AdminAuthContext.Provider value={{ admin, adminLogout, adminLogin, isLoading }}>
       {children}
     </AdminAuthContext.Provider>
   )

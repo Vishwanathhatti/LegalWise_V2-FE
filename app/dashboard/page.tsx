@@ -1,12 +1,16 @@
 "use client"
 
+import { useEffect, useState } from "react"
+import { api } from "@/lib/api"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+
 import { ProtectedRoute } from "@/components/layout/protected-route"
 import { Navbar } from "@/components/layout/navbar"
 import { useAuth } from "@/components/providers/auth-provider"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Bot, Users, Calendar, Star, Clock, DollarSign, FileText, UserCheck } from "lucide-react"
+import { Bot, Users, Calendar, Star, Clock, DollarSign, FileText, UserCheck, Check, X } from "lucide-react"
 import Link from "next/link"
 
 function UserDashboard() {
@@ -171,6 +175,32 @@ function UserDashboard() {
 }
 
 function LawyerDashboard() {
+  const [dmRequests, setDmRequests] = useState<any[]>([])
+
+  useEffect(() => {
+    fetchRequests()
+  }, [])
+
+  const fetchRequests = async () => {
+    try {
+      const res = await api.getPendingDMRequests()
+      if (res.success) {
+        setDmRequests(res.requests)
+      }
+    } catch (error) {
+      console.error("Error fetching DM requests:", error)
+    }
+  }
+
+  const handleRespond = async (requestId: string, status: 'accepted' | 'rejected') => {
+    try {
+      await api.respondToDMRequest(requestId, status)
+      fetchRequests() // Refresh list
+    } catch (error) {
+      console.error("Error responding to DM request:", error)
+    }
+  }
+
   return (
     <div className="space-y-4 sm:space-y-6">
       <div className="px-1">
@@ -249,38 +279,38 @@ function LawyerDashboard() {
         </Card>
       </div>
 
-      {/* Recent Activity */}
+      {/* DM Requests */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg sm:text-xl">Recent Bookings</CardTitle>
-            <CardDescription className="text-sm">Latest client appointments</CardDescription>
+            <CardTitle className="text-lg sm:text-xl">DM Requests</CardTitle>
+            <CardDescription className="text-sm">Latest Direct Messages Requests</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 sm:space-y-4">
-            <div className="flex items-center space-x-3 sm:space-x-4">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium">John Smith</p>
-                <p className="text-xs text-gray-500">Contract Review - Tomorrow 2PM</p>
-              </div>
-              <Badge variant="outline" className="flex-shrink-0">
-                Confirmed
-              </Badge>
-            </div>
-            <div className="flex items-center space-x-3 sm:space-x-4">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium">Emma Davis</p>
-                <p className="text-xs text-gray-500">Legal Consultation - Friday 10AM</p>
-              </div>
-              <Badge variant="outline" className="flex-shrink-0">
-                Pending
-              </Badge>
-            </div>
+            {dmRequests.length === 0 ? (
+              <p className="text-sm text-gray-500">No pending requests</p>
+            ) : (
+              dmRequests.map((request) => (
+                <div key={request._id} className="flex items-center space-x-3 sm:space-x-4">
+                  <Avatar className="w-8 h-8 sm:w-10 sm:h-10">
+                    <AvatarImage src={request.senderId.profilePicture} />
+                    <AvatarFallback>{request.senderId.name?.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">{request.senderId.name}</p>
+                    <p className="text-xs text-gray-500">Sent you a message request</p>
+                  </div>
+                  <div className="flex space-x-2">
+                    <Button size="icon" variant="outline" className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => handleRespond(request._id, 'accepted')}>
+                      <Check className="h-4 w-4" />
+                    </Button>
+                    <Button size="icon" variant="outline" className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => handleRespond(request._id, 'rejected')}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
           </CardContent>
         </Card>
 

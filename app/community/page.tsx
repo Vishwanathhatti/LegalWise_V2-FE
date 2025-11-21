@@ -273,7 +273,7 @@ export default function CommunityPage() {
                   <CardContent className="p-4 sm:p-6">
                     <div className="flex items-start space-x-3 sm:space-x-4">
                       <Avatar className="w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0">
-                        <AvatarImage src={post.author.avatar || "/placeholder.svg"} alt={post.author.name} />
+                        <AvatarImage  alt={post.author.name} />
                         <AvatarFallback>{post.author.name.charAt(0)}</AvatarFallback>
                       </Avatar>
 

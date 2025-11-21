@@ -88,7 +88,7 @@ const sidebarItems: SidebarItem[] = [
   },
 ]
 
-export function AdminSidebar() {
+export function AdminSidebar({ isCollapsed, onToggle }: { isCollapsed: boolean; onToggle: () => void }) {
   const pathname = usePathname()
   const [openSubmenu, setOpenSubmenu] = useState<string | null>(null)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -123,14 +123,19 @@ export function AdminSidebar() {
       {/* Sidebar */}
       <aside
         className={cn(
-          "bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 w-64 fixed inset-y-0 left-0 z-40 transition-transform duration-300 transform md:translate-x-0",
+          "bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 fixed inset-y-0 left-0 z-40 transition-all duration-300",
+          // Mobile: slide in/out with overlay
+          "md:relative md:translate-x-0",
           isMobileMenuOpen ? "translate-x-0" : "-translate-x-full",
+          // Desktop: toggle between collapsed and expanded
+          isCollapsed ? "md:w-16" : "md:w-64",
         )}
       >
         <div className="h-16 flex items-center justify-center border-b border-gray-200 dark:border-gray-800">
           <Link href="/admin" className="flex items-center gap-2">
             <Scale className="h-6 w-6 text-primary" />
-            <span className="font-bold text-xl">LegalWise</span>
+            {!isCollapsed && <span className="font-bold text-xl hidden md:inline">LegalWise</span>}
+            <span className="font-bold text-xl md:hidden">LegalWise</span>
           </Link>
         </div>
 
@@ -144,23 +149,51 @@ export function AdminSidebar() {
                       <Button
                         variant="ghost"
                         className={cn(
-                          "w-full justify-between",
+                          "w-full",
+                          isCollapsed ? "justify-center px-2" : "justify-between",
                           (isSubmenuActive(item) || openSubmenu === item.title) &&
                             "bg-gray-100 dark:bg-gray-800 text-primary",
                         )}
                         onClick={() => toggleSubmenu(item.title)}
+                        title={isCollapsed ? item.title : undefined}
                       >
                         <span className="flex items-center">
-                          <item.icon className="mr-2 h-5 w-5" />
-                          {item.title}
+                          <item.icon className={cn("h-5 w-5", !isCollapsed && "mr-2")} />
+                          {!isCollapsed && <span className="hidden md:inline">{item.title}</span>}
+                          <span className="md:hidden">{item.title}</span>
                         </span>
+                        {!isCollapsed && (
+                          <ChevronDown
+                            className={cn("h-4 w-4 transition-transform hidden md:block", openSubmenu === item.title && "rotate-180")}
+                          />
+                        )}
                         <ChevronDown
-                          className={cn("h-4 w-4 transition-transform", openSubmenu === item.title && "rotate-180")}
+                          className={cn("h-4 w-4 transition-transform md:hidden", openSubmenu === item.title && "rotate-180")}
                         />
                       </Button>
 
+                      {openSubmenu === item.title && !isCollapsed && (
+                        <div className="pl-8 space-y-1 mt-1 hidden md:block">
+                          {item.submenu.map((subItem) => (
+                            <Link
+                              key={subItem.title}
+                              href={subItem.href}
+                              className={cn(
+                                "block px-3 py-2 rounded-md text-sm",
+                                isActive(subItem.href)
+                                  ? "bg-gray-100 dark:bg-gray-800 text-primary"
+                                  : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800",
+                              )}
+                            >
+                              {subItem.title}
+                            </Link>
+                          ))}
+                        </div>
+                      )}
+                      
+                      {/* Mobile submenu - always show when open */}
                       {openSubmenu === item.title && (
-                        <div className="pl-8 space-y-1 mt-1">
+                        <div className="pl-8 space-y-1 mt-1 md:hidden">
                           {item.submenu.map((subItem) => (
                             <Link
                               key={subItem.title}
@@ -184,14 +217,17 @@ export function AdminSidebar() {
                       href={item.href}
                       className={cn(
                         "flex items-center px-3 py-2 rounded-md",
+                        isCollapsed ? "justify-center" : "",
                         isActive(item.href)
                           ? "bg-gray-100 dark:bg-gray-800 text-primary"
                           : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800",
                       )}
                       onClick={() => setIsMobileMenuOpen(false)}
+                      title={isCollapsed ? item.title : undefined}
                     >
-                      <item.icon className="mr-2 h-5 w-5" />
-                      {item.title}
+                      <item.icon className={cn("h-5 w-5", !isCollapsed && "mr-2")} />
+                      {!isCollapsed && <span className="hidden md:inline">{item.title}</span>}
+                      <span className="md:hidden">{item.title}</span>
                     </Link>
                   )}
                 </div>

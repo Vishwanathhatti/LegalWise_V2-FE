@@ -17,7 +17,7 @@ const posts = [
     id: 1,
     title: "Understanding Employment Contracts in 2024",
     author: "Sarah Johnson",
-    authorAvatar: "/placeholder.svg",
+    authorAvatar: undefined,
     topic: "Employment Law",
     createdAt: "2024-01-20",
     likes: 156,
@@ -30,7 +30,7 @@ const posts = [
     id: 2,
     title: "New Real Estate Laws: What You Need to Know",
     author: "Michael Chen",
-    authorAvatar: "/placeholder.svg",
+    authorAvatar: undefined,
     topic: "Real Estate",
     createdAt: "2024-01-19",
     likes: 134,
@@ -43,7 +43,7 @@ const posts = [
     id: 3,
     title: "Family Law Updates and Recent Court Decisions",
     author: "Emily Davis",
-    authorAvatar: "/placeholder.svg",
+    authorAvatar: undefined,
     topic: "Family Law",
     createdAt: "2024-01-18",
     likes: 98,
@@ -56,7 +56,7 @@ const posts = [
     id: 4,
     title: "Contract Disputes: Prevention and Resolution",
     author: "Robert Wilson",
-    authorAvatar: "/placeholder.svg",
+    authorAvatar: undefined,
     topic: "Contract Law",
     createdAt: "2024-01-17",
     likes: 87,
@@ -69,7 +69,7 @@ const posts = [
     id: 5,
     title: "Criminal Defense Strategies in Modern Courts",
     author: "Lisa Anderson",
-    authorAvatar: "/placeholder.svg",
+    authorAvatar: undefined,
     topic: "Criminal Law",
     createdAt: "2024-01-16",
     likes: 76,
@@ -241,7 +241,7 @@ export default function PostManagement() {
                     <TableCell className="hidden md:table-cell">
                       <div className="flex items-center space-x-2">
                         <Avatar className="h-6 w-6">
-                          <AvatarImage src={post.authorAvatar || "/placeholder.svg"} alt={post.author} />
+                          <AvatarImage src={post.authorAvatar} alt={post.author} />
                           <AvatarFallback>{post.author.charAt(0)}</AvatarFallback>
                         </Avatar>
                         <span className="text-sm">{post.author}</span>
@@ -300,7 +300,7 @@ export default function PostManagement() {
                 <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500">
                   <div className="flex items-center space-x-2">
                     <Avatar className="h-6 w-6">
-                      <AvatarImage src={selectedPost.authorAvatar || "/placeholder.svg"} alt={selectedPost.author} />
+                      <AvatarImage src={selectedPost.authorAvatar} alt={selectedPost.author} />
                       <AvatarFallback>{selectedPost.author.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <span>{selectedPost.author}</span>

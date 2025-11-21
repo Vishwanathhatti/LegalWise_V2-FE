@@ -17,7 +17,7 @@ const documents = [
     id: 1,
     title: "Employment Contract Template",
     uploadedBy: "Sarah Johnson",
-    uploaderAvatar: "/placeholder.svg",
+    uploaderAvatar: undefined,
     fileType: "PDF",
     fileSize: "2.4 MB",
     summary: "Standard employment contract template with modern clauses for remote work and benefits.",
@@ -29,7 +29,7 @@ const documents = [
     id: 2,
     title: "Real Estate Purchase Agreement",
     uploadedBy: "Michael Chen",
-    uploaderAvatar: "/placeholder.svg",
+    uploaderAvatar: undefined,
     fileType: "DOCX",
     fileSize: "1.8 MB",
     summary: "Comprehensive real estate purchase agreement template for residential properties.",
@@ -41,7 +41,7 @@ const documents = [
     id: 3,
     title: "Family Law Custody Agreement",
     uploadedBy: "Emily Davis",
-    uploaderAvatar: "/placeholder.svg",
+    uploaderAvatar: undefined,
     fileType: "PDF",
     fileSize: "3.1 MB",
     summary: "Child custody agreement template with provisions for shared custody arrangements.",
@@ -53,7 +53,7 @@ const documents = [
     id: 4,
     title: "Business Partnership Agreement",
     uploadedBy: "Robert Wilson",
-    uploaderAvatar: "/placeholder.svg",
+    uploaderAvatar: undefined,
     fileType: "PDF",
     fileSize: "2.7 MB",
     summary: "Partnership agreement template for small business ventures and startups.",
@@ -65,7 +65,7 @@ const documents = [
     id: 5,
     title: "Intellectual Property License",
     uploadedBy: "Lisa Anderson",
-    uploaderAvatar: "/placeholder.svg",
+    uploaderAvatar: undefined,
     fileType: "DOCX",
     fileSize: "1.5 MB",
     summary: "Software and intellectual property licensing agreement template.",
@@ -259,7 +259,7 @@ export default function DocumentsOverview() {
                     <TableCell className="hidden md:table-cell">
                       <div className="flex items-center space-x-2">
                         <Avatar className="h-6 w-6">
-                          <AvatarImage src={document.uploaderAvatar || "/placeholder.svg"} alt={document.uploadedBy} />
+                          <AvatarImage src={document.uploaderAvatar} alt={document.uploadedBy} />
                           <AvatarFallback>{document.uploadedBy.charAt(0)}</AvatarFallback>
                         </Avatar>
                         <span className="text-sm">{document.uploadedBy}</span>
@@ -317,7 +317,7 @@ export default function DocumentsOverview() {
                     <div className="flex items-center space-x-2">
                       <Avatar className="h-6 w-6">
                         <AvatarImage
-                          src={selectedDocument.uploaderAvatar || "/placeholder.svg"}
+                          src={selectedDocument.uploaderAvatar}
                           alt={selectedDocument.uploadedBy}
                         />
                         <AvatarFallback>{selectedDocument.uploadedBy.charAt(0)}</AvatarFallback>

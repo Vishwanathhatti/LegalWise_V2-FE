@@ -29,7 +29,7 @@ const adminUsers = [
     name: "John Admin",
     email: "john@legalwise.com",
     role: "Super Admin",
-    avatar: "/placeholder.svg",
+    avatar: undefined,
     lastLogin: "2024-01-20T14:30:00Z",
     status: "Active",
   },
@@ -38,7 +38,7 @@ const adminUsers = [
     name: "Sarah Manager",
     email: "sarah@legalwise.com",
     role: "Content Manager",
-    avatar: "/placeholder.svg",
+    avatar: undefined,
     lastLogin: "2024-01-20T12:15:00Z",
     status: "Active",
   },
@@ -47,7 +47,7 @@ const adminUsers = [
     name: "Mike Support",
     email: "mike@legalwise.com",
     role: "Support Admin",
-    avatar: "/placeholder.svg",
+    avatar: undefined,
     lastLogin: "2024-01-19T16:45:00Z",
     status: "Active",
   },
@@ -349,7 +349,7 @@ export default function AdminSettings() {
                         <TableCell>
                           <div className="flex items-center space-x-3">
                             <Avatar className="h-8 w-8">
-                              <AvatarImage src={admin.avatar || "/placeholder.svg"} alt={admin.name} />
+                              <AvatarImage src={admin.avatar} alt={admin.name} />
                               <AvatarFallback>{admin.name.charAt(0)}</AvatarFallback>
                             </Avatar>
                             <div>

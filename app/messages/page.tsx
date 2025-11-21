@@ -13,7 +13,19 @@ import { useAuth } from "@/components/providers/auth-provider"
 import { useSocket } from "@/components/providers/socket-provider"
 import { api } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
-import { Send, Search, Phone, Video, MoreVertical, Paperclip, Smile, ArrowLeft, MessageSquare } from "lucide-react"
+import { Send, Search, Phone, Video, MoreVertical, Paperclip, Smile, ArrowLeft, MessageSquare, Star } from "lucide-react"
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 
 interface Message {
   _id: string
@@ -51,6 +63,9 @@ export default function MessagesPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [showConversationList, setShowConversationList] = useState(true)
   const [loading, setLoading] = useState(true)
+  const [isRatingDialogOpen, setIsRatingDialogOpen] = useState(false)
+  const [rating, setRating] = useState(0)
+  const [review, setReview] = useState("")
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -229,6 +244,35 @@ export default function MessagesPage() {
     setActiveConversationId(null)
   }
 
+  const handleRateLawyer = () => {
+    setIsRatingDialogOpen(true)
+  }
+
+  const handleSubmitRating = async () => {
+    if (!activeConversation || rating === 0) return
+
+    const lawyerId = activeConversation.participants.find(p => p._id !== user?.id)?._id
+    if (!lawyerId) return
+
+    try {
+      await api.submitRating(lawyerId, { rating, review })
+      toast({
+        title: "Success",
+        description: "Rating submitted successfully",
+      })
+      setIsRatingDialogOpen(false)
+      setRating(0)
+      setReview("")
+    } catch (error) {
+      console.error("Failed to submit rating:", error)
+      toast({
+        title: "Error",
+        description: "Failed to submit rating",
+        variant: "destructive",
+      })
+    }
+  }
+
   return (
     <ProtectedRoute>
 
@@ -287,7 +331,7 @@ export default function MessagesPage() {
                               <div className="relative flex-shrink-0">
                                 <Avatar className="w-10 h-10 sm:w-12 sm:h-12">
                                   <AvatarImage
-                                    src={otherParticipant?.profilePicture || "/placeholder.svg"}
+                                    src={otherParticipant?.profilePicture}
                                     alt={otherParticipant?.name}
                                   />
                                   <AvatarFallback>{otherParticipant?.name?.charAt(0)}</AvatarFallback>
@@ -345,7 +389,7 @@ export default function MessagesPage() {
                       <div className="relative flex-shrink-0">
                         <Avatar className="w-8 h-8 sm:w-10 sm:h-10">
                           <AvatarImage
-                            src={activeConversation.participants.find(p => p._id !== user?.id)?.profilePicture || "/placeholder.svg"}
+                            src={activeConversation.participants.find(p => p._id !== user?.id)?.profilePicture}
                             alt={activeConversation.participants.find(p => p._id !== user?.id)?.name}
                           />
                           <AvatarFallback>{activeConversation.participants.find(p => p._id !== user?.id)?.name?.charAt(0)}</AvatarFallback>
@@ -372,6 +416,11 @@ export default function MessagesPage() {
                       <Button variant="ghost" size="sm">
                         <Video className="w-4 h-4" />
                       </Button>
+                      {user?.role !== 'lawyer' && (
+                        <Button variant="ghost" size="sm" onClick={handleRateLawyer}>
+                          <Star className="w-4 h-4" />
+                        </Button>
+                      )}
                       <Button variant="ghost" size="sm">
                         <MoreVertical className="w-4 h-4" />
                       </Button>
@@ -400,12 +449,12 @@ export default function MessagesPage() {
                                 <Avatar className="w-6 h-6 sm:w-8 sm:h-8 flex-shrink-0">
                                   {isCurrentUser ? (
                                     <>
-                                      <AvatarImage src={user?.avatar || "/placeholder.svg"} />
+                                      <AvatarImage src={user?.avatar} />
                                       <AvatarFallback>{user?.name?.charAt(0)}</AvatarFallback>
                                     </>
                                   ) : (
                                     <>
-                                      <AvatarImage src={otherParticipant?.profilePicture || "/placeholder.svg"} />
+                                      <AvatarImage src={otherParticipant?.profilePicture} />
                                       <AvatarFallback>{otherParticipant?.name?.charAt(0)}</AvatarFallback>
                                     </>
                                   )}
@@ -476,6 +525,59 @@ export default function MessagesPage() {
           </div>
         </div>
       </div>
+
+      {/* Rating Dialog */}
+      <Dialog open={isRatingDialogOpen} onOpenChange={setIsRatingDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rate Lawyer Service</DialogTitle>
+            <DialogDescription>
+              Share your experience with {activeConversation?.participants.find(p => p._id !== user?.id)?.name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="rating" className="text-right">
+                Rating
+              </Label>
+              <div className="col-span-3 flex space-x-1">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Button
+                    key={star}
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setRating(star)}
+                    className={`p-1 ${rating >= star ? 'text-yellow-400' : 'text-gray-300'}`}
+                  >
+                    <Star className="w-5 h-5 fill-current" />
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="review" className="text-right">
+                Review
+              </Label>
+              <Textarea
+                id="review"
+                value={review}
+                onChange={(e) => setReview(e.target.value)}
+                placeholder="Share your feedback..."
+                className="col-span-3"
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsRatingDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSubmitRating} disabled={rating === 0}>
+              Submit Rating
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </ProtectedRoute>
   )
 }

@@ -119,7 +119,7 @@ export default function MatchmakingPage() {
           id: lawyer._id,
           userId: lawyer.userId._id,
           name: lawyer.userId.name,
-          avatar: lawyer.userId.profilePicture || "/placeholder.svg",
+          avatar: lawyer.userId.profilePicture,
           specializations: lawyer.specializations,
           location: lawyer.location,
           rating: lawyer.rating,
@@ -327,7 +327,7 @@ export default function MatchmakingPage() {
                       <CardContent className="p-4 sm:p-6">
                         <div className="flex flex-col sm:flex-row items-start space-y-4 sm:space-y-0 sm:space-x-4">
                           <Avatar className="w-16 h-16 mx-auto sm:mx-0 flex-shrink-0">
-                            <AvatarImage src={lawyer.avatar || "/placeholder.svg"} alt={lawyer.name} />
+                            <AvatarImage src={lawyer.avatar} alt={lawyer.name} />
                             <AvatarFallback>{lawyer.name.charAt(0)}</AvatarFallback>
                           </Avatar>
 
@@ -408,7 +408,7 @@ export default function MatchmakingPage() {
                                         <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-4">
                                           <Avatar className="w-20 h-20">
                                             <AvatarImage
-                                              src={selectedLawyer.avatar || "/placeholder.svg"}
+                                              src={selectedLawyer.avatar}
                                               alt={selectedLawyer.name}
                                             />
                                             <AvatarFallback>{selectedLawyer.name.charAt(0)}</AvatarFallback>

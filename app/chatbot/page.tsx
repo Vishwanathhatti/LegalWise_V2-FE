@@ -23,6 +23,17 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 
+// Simple HTML sanitizer to fix link URLs and remove code block markers
+const sanitizeHtml = (html: string): string => {
+  return html
+    .replace(/^```html\s*/, '') // Remove opening ```html
+    .replace(/\s*```$/, '') // Remove closing ```
+    .replace(/<u>(https?:\/\/[^<]+)<\/u>/g, '$1') // Remove <u> tags around URLs
+    .replace(/<u>(http?:\/\/[^<]+)<\/u>/g, '$1') // Remove <u> tags around URLs (http)
+    .replace(/href="<u>(https?:\/\/[^<]+)<\/u>"/g, 'href="$1"') // Fix href attributes
+    .replace(/href="<u>(http?:\/\/[^<]+)<\/u>"/g, 'href="$1"') // Fix href attributes (http)
+}
+
 interface Message {
   _id: string
   role: "user" | "bot"
@@ -377,7 +388,7 @@ ${response.document.extractedData.map((point: string) => `<li>${point}</li>`).jo
                           <Avatar className="w-8 h-8 flex-shrink-0">
                             {message.role === "user" ? (
                               <>
-                                <AvatarImage src={user?.avatar || "/placeholder.svg"} />
+                                <AvatarImage src={user?.avatar} />
                                 <AvatarFallback>{user?.name?.charAt(0)}</AvatarFallback>
                               </>
                             ) : (
@@ -396,7 +407,7 @@ ${response.document.extractedData.map((point: string) => `<li>${point}</li>`).jo
                             ) : (
                               <div
                                 className="text-sm prose prose-sm max-w-none"
-                                dangerouslySetInnerHTML={{ __html: message.content }}
+                                dangerouslySetInnerHTML={{ __html: sanitizeHtml(message.content) }}
                               />
                             )}
                             <p

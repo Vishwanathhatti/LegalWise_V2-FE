@@ -23,7 +23,7 @@ interface Post {
     name: string
   }
   tags: string[]
-  likes: string[]
+  likes: { userId: string; _id: string }[]
   comments: string[]
   createdAt: string
 }
@@ -43,7 +43,7 @@ interface Comment {
   }
   postId?: string
   post?: string
-  likes: string[]
+  likes: { userId: string; _id: string }[]
   createdAt: string
 }
 
@@ -104,13 +104,14 @@ export default function PostPage() {
     if (!post || !user) return
 
     try {
-      const isLiked = post.likes.includes(user.id)
+      const isLiked = post.likes.some(like => like.userId === user.id)
       if (isLiked) {
         await api.unlikePost(post._id)
-        setPost(prev => prev ? { ...prev, likes: prev.likes.filter(id => id !== user.id) } : null)
+        setPost(prev => prev ? { ...prev, likes: prev.likes.filter(like => like.userId !== user.id) } : null)
       } else {
         await api.likePost(post._id)
-        setPost(prev => prev ? { ...prev, likes: [...prev.likes, user.id] } : null)
+        // Optimistically add the like. We use a temp ID since the real one comes from backend
+        setPost(prev => prev ? { ...prev, likes: [...prev.likes, { userId: user.id, _id: 'temp-id' }] } : null)
       }
     } catch (error: any) {
       toast({
@@ -128,13 +129,13 @@ export default function PostPage() {
       const comment = comments.find(c => c._id === commentId)
       if (!comment) return
 
-      const isLiked = comment.likes.includes(user.id)
+      const isLiked = comment.likes.some(like => like.userId === user.id)
       if (isLiked) {
         await api.unlikeComment(commentId)
-        setComments(prev => prev.map(c => c._id === commentId ? { ...c, likes: c.likes.filter(id => id !== user.id) } : c))
+        setComments(prev => prev.map(c => c._id === commentId ? { ...c, likes: c.likes.filter(like => like.userId !== user.id) } : c))
       } else {
         await api.likeComment(commentId)
-        setComments(prev => prev.map(c => c._id === commentId ? { ...c, likes: [...c.likes, user.id] } : c))
+        setComments(prev => prev.map(c => c._id === commentId ? { ...c, likes: [...c.likes, { userId: user.id, _id: 'temp-id' }] } : c))
       }
     } catch (error: any) {
       toast({
@@ -206,7 +207,7 @@ export default function PostPage() {
                 <CardContent className="p-6">
                   <div className="flex items-start space-x-4">
                     <Avatar className="w-12 h-12">
-                      <AvatarImage src={"/placeholder.svg"} alt={post.author.name} />
+                      <AvatarImage alt={post.author.name} />
                       <AvatarFallback>{post.author.name.charAt(0)}</AvatarFallback>
                     </Avatar>
 
@@ -229,10 +230,10 @@ export default function PostPage() {
                         <button
                           onClick={handleLikePost}
                           className={`flex items-center space-x-1 text-sm transition-colors ${
-                            post.likes.includes(user?.id || "") ? "text-red-600" : "text-gray-500 hover:text-red-600"
+                            post.likes.some(like => like.userId === user?.id) ? "text-red-600" : "text-gray-500 hover:text-red-600"
                           }`}
                         >
-                          <Heart className={`w-4 h-4 ${post.likes.includes(user?.id || "") ? "fill-current" : ""}`} />
+                          <Heart className={`w-4 h-4 ${post.likes.some(like => like.userId === user?.id) ? "fill-current" : ""}`} />
                           <span>{post.likes.length}</span>
                         </button>
 
@@ -255,7 +256,7 @@ export default function PostPage() {
                   <div className="mb-6">
                     <div className="flex space-x-3">
                       <Avatar className="w-8 h-8">
-                        <AvatarImage src={"/placeholder.svg"} />
+                        <AvatarImage />
                         <AvatarFallback>{user?.name?.charAt(0)}</AvatarFallback>
                       </Avatar>
                       <div className="flex-1">
@@ -278,13 +279,13 @@ export default function PostPage() {
                       <div key={comment._id} className="border-l-2 border-gray-100 pl-4">
                         <div className="flex items-start space-x-3">
                           <Avatar className="w-8 h-8">
-                            <AvatarImage src={"/placeholder.svg"} alt={comment.author?.name || 'Unknown'} />
-                            <AvatarFallback>{comment.author?.name?.charAt(0) || 'U'}</AvatarFallback>
+                            <AvatarImage alt={comment.userId?.name || 'Unknown'} />
+                            <AvatarFallback>{comment.userId?.name?.charAt(0) || 'U'}</AvatarFallback>
                           </Avatar>
 
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center space-x-2 mb-1">
-                              <h4 className="font-medium text-sm text-gray-900">{comment.author?.name || 'Unknown User'}</h4>
+                              <h4 className="font-medium text-sm text-gray-900">{comment.userId?.name || 'Unknown User'}</h4>
                               <span className="text-xs text-gray-500">{new Date(comment.createdAt).toLocaleDateString()}</span>
                             </div>
 
@@ -294,10 +295,10 @@ export default function PostPage() {
                               <button
                                 onClick={() => handleLikeComment(comment._id)}
                                 className={`flex items-center space-x-1 text-xs transition-colors ${
-                                  comment.likes.includes(user?.id || "") ? "text-red-600" : "text-gray-500 hover:text-red-600"
+                                  comment.likes.some(like => like.userId === user?.id) ? "text-red-600" : "text-gray-500 hover:text-red-600"
                                 }`}
                               >
-                                <Heart className={`w-3 h-3 ${comment.likes.includes(user?.id || "") ? "fill-current" : ""}`} />
+                                <Heart className={`w-3 h-3 ${comment.likes.some(like => like.userId === user?.id) ? "fill-current" : ""}`} />
                                 <span>{comment.likes.length}</span>
                               </button>
 
