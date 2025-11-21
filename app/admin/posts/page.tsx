@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,82 +9,56 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Search, Eye, Trash2, Heart, MessageCircle, TrendingUp } from "lucide-react"
+import { Search, Eye, Trash2, Heart, MessageCircle, TrendingUp, Loader2 } from "lucide-react"
+import { api } from "@/lib/api"
+import { useToast } from "@/components/ui/use-toast"
 
-// Sample posts data
-const posts = [
-  {
-    id: 1,
-    title: "Understanding Employment Contracts in 2024",
-    author: "Sarah Johnson",
-    authorAvatar: undefined,
-    topic: "Employment Law",
-    createdAt: "2024-01-20",
-    likes: 156,
-    comments: 43,
-    views: 2340,
-    trending: true,
-    content: "Employment contracts have evolved significantly in 2024. Here are the key changes you need to know...",
-  },
-  {
-    id: 2,
-    title: "New Real Estate Laws: What You Need to Know",
-    author: "Michael Chen",
-    authorAvatar: undefined,
-    topic: "Real Estate",
-    createdAt: "2024-01-19",
-    likes: 134,
-    comments: 38,
-    views: 1890,
-    trending: true,
-    content: "Recent changes in real estate legislation affect both buyers and sellers...",
-  },
-  {
-    id: 3,
-    title: "Family Law Updates and Recent Court Decisions",
-    author: "Emily Davis",
-    authorAvatar: undefined,
-    topic: "Family Law",
-    createdAt: "2024-01-18",
-    likes: 98,
-    comments: 29,
-    views: 1560,
-    trending: false,
-    content: "The latest court decisions in family law cases have set new precedents...",
-  },
-  {
-    id: 4,
-    title: "Contract Disputes: Prevention and Resolution",
-    author: "Robert Wilson",
-    authorAvatar: undefined,
-    topic: "Contract Law",
-    createdAt: "2024-01-17",
-    likes: 87,
-    comments: 22,
-    views: 1230,
-    trending: false,
-    content: "Contract disputes can be costly and time-consuming. Here's how to prevent them...",
-  },
-  {
-    id: 5,
-    title: "Criminal Defense Strategies in Modern Courts",
-    author: "Lisa Anderson",
-    authorAvatar: undefined,
-    topic: "Criminal Law",
-    createdAt: "2024-01-16",
-    likes: 76,
-    comments: 18,
-    views: 980,
-    trending: false,
-    content: "Modern criminal defense requires understanding of both traditional and digital evidence...",
-  },
-]
+interface Post {
+  _id: string
+  title: string
+  content: string
+  author: string
+  authorAvatar?: string
+  topic: string
+  tags: string[]
+  createdAt: string
+  likes: number
+  comments: number
+  views: number
+  trending: boolean
+}
 
 export default function PostManagement() {
+  const [posts, setPosts] = useState<Post[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [topicFilter, setTopicFilter] = useState("all")
   const [sortFilter, setSortFilter] = useState("recent")
-  const [selectedPost, setSelectedPost] = useState<any>(null)
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null)
+  const { toast } = useToast()
+
+  const fetchPosts = async () => {
+    setIsLoading(true)
+    try {
+      const response = await api.getAdminPosts()
+      if (response.success) {
+        setPosts(response.posts)
+      }
+    } catch (error) {
+      console.error("Error fetching posts:", error)
+      toast({
+        title: "Error",
+        description: "Failed to fetch posts",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchPosts()
+  }, [])
 
   const filteredPosts = posts
     .filter((post) => {
@@ -109,9 +83,28 @@ export default function PostManagement() {
       }
     })
 
-  const handleDeletePost = (postId: number) => {
-    // Handle post deletion
-    console.log("Deleting post:", postId)
+  const handleDeletePost = async (postId: string) => {
+    if (!confirm("Are you sure you want to delete this post?")) {
+      return
+    }
+
+    try {
+      await api.deletePost(postId)
+      toast({
+        title: "Success",
+        description: "Post deleted successfully",
+      })
+      fetchPosts() // Refresh list
+      if (selectedPost?._id === postId) {
+        setSelectedPost(null)
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete post",
+        variant: "destructive",
+      })
+    }
   }
 
   return (
@@ -224,8 +217,24 @@ export default function PostManagement() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredPosts.map((post) => (
-                  <TableRow key={post.id}>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-24 text-center">
+                      <div className="flex justify-center items-center">
+                        <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                        Loading posts...
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : filteredPosts.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-24 text-center">
+                      No posts found.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredPosts.map((post) => (
+                    <TableRow key={post._id}>
                     <TableCell>
                       <div className="max-w-[300px]">
                         <div className="font-medium truncate">{post.title}</div>
@@ -271,15 +280,16 @@ export default function PostManagement() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleDeletePost(post.id)}
+                          onClick={() => handleDeletePost(post._id)}
                           className="text-red-600 hover:text-red-700"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </TableCell>
-                  </TableRow>
-                ))}
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>
@@ -338,7 +348,7 @@ export default function PostManagement() {
                   variant="outline"
                   size="sm"
                   className="text-red-600 border-red-600 hover:bg-red-50 bg-transparent"
-                  onClick={() => handleDeletePost(selectedPost.id)}
+                  onClick={() => handleDeletePost(selectedPost._id)}
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
                   Delete Post

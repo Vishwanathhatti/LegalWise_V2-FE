@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,63 +8,61 @@ import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Search, Eye, Edit, Trash2, MoreHorizontal } from "lucide-react"
+import { Search, Eye, Edit, Trash2, MoreHorizontal, Loader2 } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { api } from "@/lib/api"
+import { useToast } from "@/components/ui/use-toast"
 
-// Sample user data
-const users = [
-  {
-    id: 1,
-    name: "John Smith",
-    email: "john.smith@email.com",
-    role: "User",
-    status: "Active",
-    createdAt: "2024-01-15",
-    lastLogin: "2024-01-20",
-  },
-  {
-    id: 2,
-    name: "Sarah Johnson",
-    email: "sarah.johnson@email.com",
-    role: "Lawyer",
-    status: "Active",
-    createdAt: "2024-01-10",
-    lastLogin: "2024-01-19",
-  },
-  {
-    id: 3,
-    name: "Michael Chen",
-    email: "michael.chen@email.com",
-    role: "User",
-    status: "Blocked",
-    createdAt: "2024-01-08",
-    lastLogin: "2024-01-18",
-  },
-  {
-    id: 4,
-    name: "Emily Davis",
-    email: "emily.davis@email.com",
-    role: "Lawyer",
-    status: "Active",
-    createdAt: "2024-01-05",
-    lastLogin: "2024-01-20",
-  },
-  {
-    id: 5,
-    name: "Robert Wilson",
-    email: "robert.wilson@email.com",
-    role: "User",
-    status: "Active",
-    createdAt: "2024-01-03",
-    lastLogin: "2024-01-17",
-  },
-]
+interface User {
+  id: string
+  name: string
+  email: string
+  role: string
+  status: string
+  createdAt: string
+  lastLogin: string
+}
 
 export default function UserManagement() {
+  const [users, setUsers] = useState<User[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [roleFilter, setRoleFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
-  const [selectedUser, setSelectedUser] = useState<any>(null)
+  const [selectedUser, setSelectedUser] = useState<User | null>(null)
+  const { toast } = useToast()
+
+  const fetchUsers = async () => {
+    setIsLoading(true)
+    try {
+      const response = await api.getAllUsers()
+      if (response.success) {
+        const mappedUsers = response.users.map((user: any) => ({
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role.charAt(0).toUpperCase() + user.role.slice(1), // Capitalize
+          status: "Active", // Default status as backend doesn't have it yet
+          createdAt: new Date(user.createdAt).toLocaleDateString(),
+          lastLogin: new Date(user.updatedAt).toLocaleDateString(), // Using updatedAt as proxy
+        }))
+        setUsers(mappedUsers)
+      }
+    } catch (error) {
+      console.error("Error fetching users:", error)
+      toast({
+        title: "Error",
+        description: "Failed to fetch users",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchUsers()
+  }, [])
 
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
@@ -153,44 +151,61 @@ export default function UserManagement() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredUsers.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell className="font-medium">{user.id}</TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{user.name}</div>
-                        <div className="text-sm text-gray-500 md:hidden">{user.email}</div>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="h-24 text-center">
+                      <div className="flex justify-center items-center">
+                        <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                        Loading users...
                       </div>
                     </TableCell>
-                    <TableCell className="hidden md:table-cell">{user.email}</TableCell>
-                    <TableCell>{getRoleBadge(user.role)}</TableCell>
-                    <TableCell>{getStatusBadge(user.status)}</TableCell>
-                    <TableCell className="hidden lg:table-cell">{user.createdAt}</TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => setSelectedUser(user)}>
-                            <Eye className="mr-2 h-4 w-4" />
-                            View Details
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Edit User
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="text-red-600">
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete User
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                  </TableRow>
+                ) : filteredUsers.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="h-24 text-center">
+                      No users found.
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  filteredUsers.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell className="font-medium">{user.id.substring(0, 8)}...</TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{user.name}</div>
+                          <div className="text-sm text-gray-500 md:hidden">{user.email}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">{user.email}</TableCell>
+                      <TableCell>{getRoleBadge(user.role)}</TableCell>
+                      <TableCell>{getStatusBadge(user.status)}</TableCell>
+                      <TableCell className="hidden lg:table-cell">{user.createdAt}</TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => setSelectedUser(user)}>
+                              <Eye className="mr-2 h-4 w-4" />
+                              View Details
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Edit User
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="text-red-600">
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete User
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>

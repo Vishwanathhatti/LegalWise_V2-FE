@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,71 +9,78 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Search, Eye, Check, X, Star } from "lucide-react"
+import { Search, Eye, Check, X, Star, Loader2 } from "lucide-react"
+import { api } from "@/lib/api"
+import { useToast } from "@/components/ui/use-toast"
 
-// Sample lawyer data
-const lawyers = [
-  {
-    id: 1,
-    name: "Sarah Johnson",
-    email: "sarah.johnson@email.com",
-    specialization: "Contract Law",
-    status: "Verified",
-    registeredAt: "2024-01-10",
-    rating: 4.9,
-    cases: 45,
-    avatar: undefined,
-  },
-  {
-    id: 2,
-    name: "Michael Chen",
-    email: "michael.chen@email.com",
-    specialization: "Family Law",
-    status: "Pending",
-    registeredAt: "2024-01-18",
-    rating: 0,
-    cases: 0,
-    avatar: undefined,
-  },
-  {
-    id: 3,
-    name: "Emily Davis",
-    email: "emily.davis@email.com",
-    specialization: "Employment Law",
-    status: "Verified",
-    registeredAt: "2024-01-05",
-    rating: 4.7,
-    cases: 32,
-    avatar: undefined,
-  },
-  {
-    id: 4,
-    name: "Robert Wilson",
-    email: "robert.wilson@email.com",
-    specialization: "Real Estate",
-    status: "Pending",
-    registeredAt: "2024-01-20",
-    rating: 0,
-    cases: 0,
-    avatar: undefined,
-  },
-  {
-    id: 5,
-    name: "Lisa Anderson",
-    email: "lisa.anderson@email.com",
-    specialization: "Criminal Law",
-    status: "Verified",
-    registeredAt: "2024-01-12",
-    rating: 4.8,
-    cases: 28,
-    avatar: undefined,
-  },
-]
+interface Lawyer {
+  id: string
+  name: string
+  email: string
+  specialization: string
+  status: "Verified" | "Pending"
+  registeredAt: string
+  rating: number
+  cases: number
+  avatar?: string
+  // Additional fields for profile
+  bio?: string
+  location?: string
+  experience?: number
+  languages?: string[]
+  education?: string
+  consultationCharges?: number
+}
 
 export default function LawyerManagement() {
+  const [lawyers, setLawyers] = useState<Lawyer[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
-  const [selectedLawyer, setSelectedLawyer] = useState<any>(null)
+  const [selectedLawyer, setSelectedLawyer] = useState<Lawyer | null>(null)
+  const { toast } = useToast()
+
+  const fetchLawyers = async () => {
+    setIsLoading(true)
+    try {
+      // Fetch all lawyers
+      const allLawyersResponse = await api.getAllLawyers()
+      
+      // Map backend data to frontend interface
+      const mappedLawyers: Lawyer[] = allLawyersResponse.lawyers.map((l: any) => ({
+        id: l._id,
+        name: l.userId?.name || "Unknown",
+        email: l.userId?.email || "No email",
+        specialization: l.specializations?.join(", ") || "N/A",
+        status: l.isVerified ? "Verified" : "Pending",
+        registeredAt: new Date(l.createdAt).toLocaleDateString(),
+        rating: l.rating || 0,
+        cases: 0, // Not available in backend yet
+        avatar: l.userId?.profilePicture,
+        bio: l.bio,
+        location: l.location,
+        experience: l.experience,
+        languages: l.languages,
+        education: l.education,
+        consultationCharges: l.consultationCharges
+      }))
+
+      setLawyers(mappedLawyers)
+    } catch (error) {
+      console.error("Error fetching lawyers:", error)
+      toast({
+        title: "Error",
+        description: "Failed to fetch lawyers. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchLawyers()
+  }, [])
 
   const filteredLawyers = lawyers.filter((lawyer) => {
     const matchesSearch =
@@ -93,14 +100,50 @@ export default function LawyerManagement() {
     )
   }
 
-  const handleVerify = (lawyerId: number) => {
-    // Handle lawyer verification
-    console.log("Verifying lawyer:", lawyerId)
+  const handleVerify = async (lawyerId: string) => {
+    try {
+      await api.verifyLawyer(lawyerId)
+      toast({
+        title: "Success",
+        description: "Lawyer verified successfully",
+      })
+      // Refresh list
+      fetchLawyers()
+      if (selectedLawyer?.id === lawyerId) {
+        setSelectedLawyer(null)
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to verify lawyer",
+        variant: "destructive",
+      })
+    }
   }
 
-  const handleReject = (lawyerId: number) => {
-    // Handle lawyer rejection
-    console.log("Rejecting lawyer:", lawyerId)
+  const handleReject = async (lawyerId: string) => {
+    if (!confirm("Are you sure you want to reject this lawyer? This will delete their lawyer profile.")) {
+      return
+    }
+    
+    try {
+      await api.deleteLawyer(lawyerId)
+      toast({
+        title: "Success",
+        description: "Lawyer application rejected",
+      })
+      // Refresh list
+      fetchLawyers()
+      if (selectedLawyer?.id === lawyerId) {
+        setSelectedLawyer(null)
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to reject lawyer",
+        variant: "destructive",
+      })
+    }
   }
 
   return (
@@ -187,63 +230,82 @@ export default function LawyerManagement() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredLawyers.map((lawyer) => (
-                  <TableRow key={lawyer.id}>
-                    <TableCell>
-                      <div className="flex items-center space-x-3">
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={lawyer.avatar} alt={lawyer.name} />
-                          <AvatarFallback>{lawyer.name.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className="font-medium">{lawyer.name}</div>
-                          <div className="text-sm text-gray-500">{lawyer.email}</div>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">{lawyer.specialization}</TableCell>
-                    <TableCell>{getStatusBadge(lawyer.status)}</TableCell>
-                    <TableCell className="hidden lg:table-cell">
-                      {lawyer.rating > 0 ? (
-                        <div className="flex items-center">
-                          <Star className="h-4 w-4 text-yellow-400 mr-1" />
-                          {lawyer.rating}
-                        </div>
-                      ) : (
-                        <span className="text-gray-400">N/A</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell">{lawyer.cases}</TableCell>
-                    <TableCell className="hidden xl:table-cell">{lawyer.registeredAt}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        <Button variant="ghost" size="sm" onClick={() => setSelectedLawyer(lawyer)}>
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        {lawyer.status === "Pending" && (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleVerify(lawyer.id)}
-                              className="text-green-600 hover:text-green-700"
-                            >
-                              <Check className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleReject(lawyer.id)}
-                              className="text-red-600 hover:text-red-700"
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </>
-                        )}
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="h-24 text-center">
+                      <div className="flex justify-center items-center">
+                        <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                        Loading lawyers...
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : filteredLawyers.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="h-24 text-center">
+                      No lawyers found.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredLawyers.map((lawyer) => (
+                    <TableRow key={lawyer.id}>
+                      <TableCell>
+                        <div className="flex items-center space-x-3">
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={lawyer.avatar} alt={lawyer.name} />
+                            <AvatarFallback>{lawyer.name.charAt(0)}</AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <div className="font-medium">{lawyer.name}</div>
+                            <div className="text-sm text-gray-500">{lawyer.email}</div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">{lawyer.specialization}</TableCell>
+                      <TableCell>{getStatusBadge(lawyer.status)}</TableCell>
+                      <TableCell className="hidden lg:table-cell">
+                        {lawyer.rating > 0 ? (
+                          <div className="flex items-center">
+                            <Star className="h-4 w-4 text-yellow-400 mr-1" />
+                            {lawyer.rating.toFixed(1)}
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">N/A</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell">{lawyer.cases}</TableCell>
+                      <TableCell className="hidden xl:table-cell">{lawyer.registeredAt}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <Button variant="ghost" size="sm" onClick={() => setSelectedLawyer(lawyer)}>
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          {lawyer.status === "Pending" && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleVerify(lawyer.id)}
+                                className="text-green-600 hover:text-green-700"
+                                title="Verify Lawyer"
+                              >
+                                <Check className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleReject(lawyer.id)}
+                                className="text-red-600 hover:text-red-700"
+                                title="Reject Application"
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>
@@ -252,7 +314,7 @@ export default function LawyerManagement() {
 
       {/* Lawyer Profile Dialog */}
       <Dialog open={!!selectedLawyer} onOpenChange={() => setSelectedLawyer(null)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Lawyer Profile</DialogTitle>
             <DialogDescription>Detailed information about the selected lawyer</DialogDescription>
@@ -283,12 +345,32 @@ export default function LawyerManagement() {
                 <div>
                   <label className="text-sm font-medium">Rating</label>
                   <p className="text-sm text-gray-600">
-                    {selectedLawyer.rating > 0 ? `${selectedLawyer.rating}/5` : "No ratings yet"}
+                    {selectedLawyer.rating > 0 ? `${selectedLawyer.rating.toFixed(1)}/5` : "No ratings yet"}
                   </p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium">Cases Handled</label>
-                  <p className="text-sm text-gray-600">{selectedLawyer.cases}</p>
+                  <label className="text-sm font-medium">Experience</label>
+                  <p className="text-sm text-gray-600">{selectedLawyer.experience ? `${selectedLawyer.experience} years` : "N/A"}</p>
+                </div>
+                <div className="col-span-2">
+                  <label className="text-sm font-medium">Location</label>
+                  <p className="text-sm text-gray-600">{selectedLawyer.location || "N/A"}</p>
+                </div>
+                <div className="col-span-2">
+                  <label className="text-sm font-medium">Education</label>
+                  <p className="text-sm text-gray-600">{selectedLawyer.education || "N/A"}</p>
+                </div>
+                <div className="col-span-2">
+                  <label className="text-sm font-medium">Languages</label>
+                  <p className="text-sm text-gray-600">{selectedLawyer.languages?.join(", ") || "N/A"}</p>
+                </div>
+                <div className="col-span-2">
+                  <label className="text-sm font-medium">Bio</label>
+                  <p className="text-sm text-gray-600">{selectedLawyer.bio || "N/A"}</p>
+                </div>
+                <div className="col-span-2">
+                  <label className="text-sm font-medium">Consultation Charges</label>
+                  <p className="text-sm text-gray-600">{selectedLawyer.consultationCharges ? `$${selectedLawyer.consultationCharges}/hr` : "N/A"}</p>
                 </div>
               </div>
 

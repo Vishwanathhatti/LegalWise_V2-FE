@@ -131,6 +131,62 @@ class ApiClient {
     });
   }
 
+  async getUnverifiedLawyers(): Promise<{ success: boolean; lawyers: any[]; count: number }> {
+    return this.request('/admin/lawyers/unverified');
+  }
+
+  async verifyLawyer(id: string): Promise<{ success: boolean; message: string; lawyer: any }> {
+    return this.request(`/admin/lawyers/${id}/verify`, {
+      method: 'PATCH',
+    });
+  }
+
+  async deleteLawyer(id: string): Promise<{ success: boolean; message: string }> {
+    return this.request(`/admin/lawyers/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getAllUsers(): Promise<{ success: boolean; users: any[]; count: number }> {
+    return this.request('/admin/users');
+  }
+
+  async getDashboardStats(): Promise<{ success: boolean; trendingPosts: any[]; popularTopics: any[] }> {
+    return this.request('/admin/dashboard/stats');
+  }
+
+  async getAllDocuments(): Promise<{ success: boolean; documents: any[]; count: number }> {
+    return this.request('/admin/documents');
+  }
+
+  async deleteDocumentAdmin(id: string): Promise<{ success: boolean; message: string }> {
+    return this.request(`/admin/documents/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getAllConversations(): Promise<{ success: boolean; conversations: any[]; count: number }> {
+    return this.request('/admin/conversations');
+  }
+
+  async getAllDirectMessages(): Promise<{ success: boolean; directMessages: any[]; count: number }> {
+    return this.request('/admin/direct-messages');
+  }
+
+  async getAdminPosts(): Promise<{ success: boolean; posts: any[]; count: number }> {
+    return this.request('/admin/posts');
+  }
+
+  async deletePost(id: string): Promise<{ success: boolean; message: string }> {
+    return this.request(`/admin/posts/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getAdminStats(): Promise<{ success: boolean; stats: any }> {
+    return this.request('/admin/stats');
+  }
+
   // Posts APIs
   async getAllPosts(): Promise<{ posts: any[] }> {
     const response = await this.request<{ posts: any[]; success: boolean }>('/community/posts/');

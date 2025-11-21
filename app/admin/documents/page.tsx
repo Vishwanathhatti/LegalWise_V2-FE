@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,77 +9,55 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Search, Eye, Trash2, Download, FileText, File, ImageIcon } from "lucide-react"
+import { Search, Eye, Trash2, Download, FileText, File, ImageIcon, Loader2 } from "lucide-react"
+import { api } from "@/lib/api"
+import { useToast } from "@/components/ui/use-toast"
 
-// Sample documents data
-const documents = [
-  {
-    id: 1,
-    title: "Employment Contract Template",
-    uploadedBy: "Sarah Johnson",
-    uploaderAvatar: undefined,
-    fileType: "PDF",
-    fileSize: "2.4 MB",
-    summary: "Standard employment contract template with modern clauses for remote work and benefits.",
-    createdAt: "2024-01-20T10:30:00Z",
-    downloads: 156,
-    category: "Contract",
-  },
-  {
-    id: 2,
-    title: "Real Estate Purchase Agreement",
-    uploadedBy: "Michael Chen",
-    uploaderAvatar: undefined,
-    fileType: "DOCX",
-    fileSize: "1.8 MB",
-    summary: "Comprehensive real estate purchase agreement template for residential properties.",
-    createdAt: "2024-01-19T14:20:00Z",
-    downloads: 89,
-    category: "Real Estate",
-  },
-  {
-    id: 3,
-    title: "Family Law Custody Agreement",
-    uploadedBy: "Emily Davis",
-    uploaderAvatar: undefined,
-    fileType: "PDF",
-    fileSize: "3.1 MB",
-    summary: "Child custody agreement template with provisions for shared custody arrangements.",
-    createdAt: "2024-01-18T09:15:00Z",
-    downloads: 67,
-    category: "Family Law",
-  },
-  {
-    id: 4,
-    title: "Business Partnership Agreement",
-    uploadedBy: "Robert Wilson",
-    uploaderAvatar: undefined,
-    fileType: "PDF",
-    fileSize: "2.7 MB",
-    summary: "Partnership agreement template for small business ventures and startups.",
-    createdAt: "2024-01-17T16:45:00Z",
-    downloads: 134,
-    category: "Business",
-  },
-  {
-    id: 5,
-    title: "Intellectual Property License",
-    uploadedBy: "Lisa Anderson",
-    uploaderAvatar: undefined,
-    fileType: "DOCX",
-    fileSize: "1.5 MB",
-    summary: "Software and intellectual property licensing agreement template.",
-    createdAt: "2024-01-16T11:30:00Z",
-    downloads: 45,
-    category: "IP Law",
-  },
-]
+interface Document {
+  _id: string
+  title: string
+  uploadedBy: string
+  uploaderAvatar?: string
+  fileType: string
+  fileSize: string
+  summary: string
+  createdAt: string
+  downloads: number
+  category: string
+  fileUrl: string
+}
 
 export default function DocumentsOverview() {
+  const [documents, setDocuments] = useState<Document[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [categoryFilter, setCategoryFilter] = useState("all")
   const [fileTypeFilter, setFileTypeFilter] = useState("all")
-  const [selectedDocument, setSelectedDocument] = useState<any>(null)
+  const [selectedDocument, setSelectedDocument] = useState<Document | null>(null)
+  const { toast } = useToast()
+
+  const fetchDocuments = async () => {
+    setIsLoading(true)
+    try {
+      const response = await api.getAllDocuments()
+      if (response.success) {
+        setDocuments(response.documents)
+      }
+    } catch (error) {
+      console.error("Error fetching documents:", error)
+      toast({
+        title: "Error",
+        description: "Failed to fetch documents",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchDocuments()
+  }, [])
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString() + " " + new Date(dateString).toLocaleTimeString()
@@ -124,12 +102,35 @@ export default function DocumentsOverview() {
     return matchesSearch && matchesCategory && matchesFileType
   })
 
-  const handleDeleteDocument = (docId: number) => {
-    console.log("Deleting document:", docId)
+  const handleDeleteDocument = async (docId: string) => {
+    if (!confirm("Are you sure you want to delete this document?")) {
+      return
+    }
+
+    try {
+      await api.deleteDocumentAdmin(docId)
+      toast({
+        title: "Success",
+        description: "Document deleted successfully",
+      })
+      fetchDocuments() // Refresh list
+      if (selectedDocument?._id === docId) {
+        setSelectedDocument(null)
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete document",
+        variant: "destructive",
+      })
+    }
   }
 
-  const handleDownloadDocument = (docId: number) => {
-    console.log("Downloading document:", docId)
+  const handleDownloadDocument = (docId: string) => {
+    const doc = documents.find(d => d._id === docId)
+    if (doc?.fileUrl) {
+      window.open(doc.fileUrl, '_blank')
+    }
   }
 
   return (
@@ -245,53 +246,70 @@ export default function DocumentsOverview() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredDocuments.map((document) => (
-                  <TableRow key={document.id}>
-                    <TableCell>
-                      <div className="flex items-center space-x-3">
-                        {getFileTypeIcon(document.fileType)}
-                        <div className="max-w-[200px]">
-                          <div className="font-medium truncate">{document.title}</div>
-                          <div className="text-sm text-gray-500 md:hidden">by {document.uploadedBy}</div>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      <div className="flex items-center space-x-2">
-                        <Avatar className="h-6 w-6">
-                          <AvatarImage src={document.uploaderAvatar} alt={document.uploadedBy} />
-                          <AvatarFallback>{document.uploadedBy.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <span className="text-sm">{document.uploadedBy}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell">
-                      <Badge variant="outline">{document.category}</Badge>
-                    </TableCell>
-                    <TableCell>{getFileTypeBadge(document.fileType)}</TableCell>
-                    <TableCell className="hidden lg:table-cell">{document.fileSize}</TableCell>
-                    <TableCell className="hidden xl:table-cell">{document.downloads}</TableCell>
-                    <TableCell className="hidden xl:table-cell">{formatDate(document.createdAt)}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        <Button variant="ghost" size="sm" onClick={() => setSelectedDocument(document)}>
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleDownloadDocument(document.id)}>
-                          <Download className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteDocument(document.id)}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="h-24 text-center">
+                      <div className="flex justify-center items-center">
+                        <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                        Loading documents...
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : filteredDocuments.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="h-24 text-center">
+                      No documents found.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredDocuments.map((document) => (
+                    <TableRow key={document._id}>
+                      <TableCell>
+                        <div className="flex items-center space-x-3">
+                          {getFileTypeIcon(document.fileType)}
+                          <div className="max-w-[200px]">
+                            <div className="font-medium truncate">{document.title}</div>
+                            <div className="text-sm text-gray-500 md:hidden">by {document.uploadedBy}</div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        <div className="flex items-center space-x-2">
+                          <Avatar className="h-6 w-6">
+                            <AvatarImage src={document.uploaderAvatar} alt={document.uploadedBy} />
+                            <AvatarFallback>{document.uploadedBy.charAt(0)}</AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm">{document.uploadedBy}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell">
+                        <Badge variant="outline">{document.category}</Badge>
+                      </TableCell>
+                      <TableCell>{getFileTypeBadge(document.fileType)}</TableCell>
+                      <TableCell className="hidden lg:table-cell">{document.fileSize}</TableCell>
+                      <TableCell className="hidden xl:table-cell">{document.downloads}</TableCell>
+                      <TableCell className="hidden xl:table-cell">{formatDate(document.createdAt)}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <Button variant="ghost" size="sm" onClick={() => setSelectedDocument(document)}>
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => handleDownloadDocument(document._id)}>
+                            <Download className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteDocument(document._id)}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>
@@ -357,7 +375,7 @@ export default function DocumentsOverview() {
               </div>
 
               <div className="flex space-x-2 pt-4 border-t">
-                <Button onClick={() => handleDownloadDocument(selectedDocument.id)}>
+                <Button onClick={() => handleDownloadDocument(selectedDocument._id)}>
                   <Download className="h-4 w-4 mr-2" />
                   Download
                 </Button>
@@ -368,7 +386,7 @@ export default function DocumentsOverview() {
                 <Button
                   variant="outline"
                   className="text-red-600 border-red-600 hover:bg-red-50 bg-transparent"
-                  onClick={() => handleDeleteDocument(selectedDocument.id)}
+                  onClick={() => handleDeleteDocument(selectedDocument._id)}
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
                   Delete

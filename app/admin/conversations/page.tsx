@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,82 +9,73 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Search, Eye, Bot, MessageSquare, Flag } from "lucide-react"
+import { Search, Eye, Bot, MessageSquare, Flag, Loader2 } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { api } from "@/lib/api"
+import { useToast } from "@/components/ui/use-toast"
 
-// Sample AI conversations data
-const aiConversations = [
-  {
-    id: 1,
-    userId: 1,
-    userName: "John Smith",
-    userAvatar: undefined,
-    messageCount: 15,
-    lastMessage: "Thank you for the contract advice!",
-    lastMessageTime: "2024-01-20T14:30:00Z",
-    topic: "Contract Law",
-    flagged: false,
-  },
-  {
-    id: 2,
-    userId: 2,
-    userName: "Sarah Johnson",
-    userAvatar: undefined,
-    messageCount: 8,
-    lastMessage: "Can you help me understand employment rights?",
-    lastMessageTime: "2024-01-20T12:15:00Z",
-    topic: "Employment Law",
-    flagged: false,
-  },
-  {
-    id: 3,
-    userId: 3,
-    userName: "Mike Wilson",
-    userAvatar: undefined,
-    messageCount: 23,
-    lastMessage: "This AI is giving wrong legal advice!",
-    lastMessageTime: "2024-01-20T10:45:00Z",
-    topic: "General",
-    flagged: true,
-  },
-]
+interface AIConversation {
+  _id: string
+  userId: string
+  userName: string
+  userAvatar?: string
+  messageCount: number
+  lastMessage: string
+  lastMessageTime: string
+  topic: string
+  flagged: boolean
+}
 
-// Sample direct messages data
-const directMessages = [
-  {
-    id: 1,
-    participants: ["John Smith", "Sarah Johnson"],
-    participantAvatars: [undefined, undefined],
-    messageCount: 12,
-    lastMessage: "Thanks for the consultation!",
-    lastMessageTime: "2024-01-20T16:20:00Z",
-    flagged: false,
-  },
-  {
-    id: 2,
-    participants: ["Mike Wilson", "Emily Davis"],
-    participantAvatars: [undefined, undefined],
-    messageCount: 5,
-    lastMessage: "When can we schedule the meeting?",
-    lastMessageTime: "2024-01-20T11:30:00Z",
-    flagged: false,
-  },
-  {
-    id: 3,
-    participants: ["Robert Taylor", "Lisa Anderson"],
-    participantAvatars: [undefined, undefined],
-    messageCount: 8,
-    lastMessage: "This is inappropriate content",
-    lastMessageTime: "2024-01-19T18:45:00Z",
-    flagged: true,
-  },
-]
+interface DirectMessage {
+  _id: string
+  participants: string[]
+  participantAvatars: (string | undefined)[]
+  messageCount: number
+  lastMessage: string
+  lastMessageTime: string
+  flagged: boolean
+}
 
 export default function ConversationsManagement() {
+  const [aiConversations, setAiConversations] = useState<AIConversation[]>([])
+  const [directMessages, setDirectMessages] = useState<DirectMessage[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [flagFilter, setFlagFilter] = useState("all")
   const [selectedConversation, setSelectedConversation] = useState<any>(null)
   const [conversationType, setConversationType] = useState<"ai" | "dm">("ai")
+  const { toast } = useToast()
+
+  const fetchConversations = async () => {
+    setIsLoading(true)
+    try {
+      const [aiResponse, dmResponse] = await Promise.all([
+        api.getAllConversations(),
+        api.getAllDirectMessages()
+      ])
+      
+      if (aiResponse.success) {
+        setAiConversations(aiResponse.conversations)
+      }
+      
+      if (dmResponse.success) {
+        setDirectMessages(dmResponse.directMessages)
+      }
+    } catch (error) {
+      console.error("Error fetching conversations:", error)
+      toast({
+        title: "Error",
+        description: "Failed to fetch conversations",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchConversations()
+  }, [])
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString() + " " + new Date(dateString).toLocaleTimeString()
@@ -221,57 +212,74 @@ export default function ConversationsManagement() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredAIConversations.map((conversation) => (
-                      <TableRow key={conversation.id}>
-                        <TableCell>
-                          <div className="flex items-center space-x-3">
-                            <Avatar className="h-8 w-8">
-                              <AvatarImage
-                                src={conversation.userAvatar}
-                                alt={conversation.userName}
-                              />
-                              <AvatarFallback>{conversation.userName.charAt(0)}</AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <div className="font-medium">{conversation.userName}</div>
-                              <div className="text-sm text-gray-500 md:hidden">{conversation.topic}</div>
-                            </div>
+                    {isLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="h-24 text-center">
+                          <div className="flex justify-center items-center">
+                            <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                            Loading conversations...
                           </div>
                         </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          <Badge variant="outline">{conversation.topic}</Badge>
-                        </TableCell>
-                        <TableCell>{conversation.messageCount}</TableCell>
-                        <TableCell className="hidden lg:table-cell max-w-[200px] truncate">
-                          {conversation.lastMessage}
-                        </TableCell>
-                        <TableCell className="hidden lg:table-cell">
-                          {formatDate(conversation.lastMessageTime)}
-                        </TableCell>
-                        <TableCell>
-                          {conversation.flagged ? (
-                            <Badge className="bg-red-100 text-red-800">
-                              <Flag className="h-3 w-3 mr-1" />
-                              Flagged
-                            </Badge>
-                          ) : (
-                            <Badge className="bg-green-100 text-green-800">Normal</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedConversation(conversation)
-                              setConversationType("ai")
-                            }}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
+                      </TableRow>
+                    ) : filteredAIConversations.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="h-24 text-center">
+                          No conversations found.
                         </TableCell>
                       </TableRow>
-                    ))}
+                    ) : (
+                      filteredAIConversations.map((conversation) => (
+                        <TableRow key={conversation._id}>
+                          <TableCell>
+                            <div className="flex items-center space-x-3">
+                              <Avatar className="h-8 w-8">
+                                <AvatarImage
+                                  src={conversation.userAvatar}
+                                  alt={conversation.userName}
+                                />
+                                <AvatarFallback>{conversation.userName.charAt(0)}</AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <div className="font-medium">{conversation.userName}</div>
+                                <div className="text-sm text-gray-500 md:hidden">{conversation.topic}</div>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            <Badge variant="outline">{conversation.topic}</Badge>
+                          </TableCell>
+                          <TableCell>{conversation.messageCount}</TableCell>
+                          <TableCell className="hidden lg:table-cell max-w-[200px] truncate">
+                            {conversation.lastMessage}
+                          </TableCell>
+                          <TableCell className="hidden lg:table-cell">
+                            {formatDate(conversation.lastMessageTime)}
+                          </TableCell>
+                          <TableCell>
+                            {conversation.flagged ? (
+                              <Badge className="bg-red-100 text-red-800">
+                                <Flag className="h-3 w-3 mr-1" />
+                                Flagged
+                              </Badge>
+                            ) : (
+                              <Badge className="bg-green-100 text-green-800">Normal</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedConversation(conversation)
+                                setConversationType("ai")
+                              }}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </div>
@@ -291,48 +299,65 @@ export default function ConversationsManagement() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredDirectMessages.map((dm) => (
-                      <TableRow key={dm.id}>
-                        <TableCell>
-                          <div className="flex items-center space-x-2">
-                            <div className="flex -space-x-2">
-                              {dm.participantAvatars.map((avatar, index) => (
-                                <Avatar key={index} className="h-6 w-6 border-2 border-white">
-                                  <AvatarImage src={avatar} alt={dm.participants[index]} />
-                                  <AvatarFallback>{dm.participants[index].charAt(0)}</AvatarFallback>
-                                </Avatar>
-                              ))}
-                            </div>
-                            <div className="text-sm">{dm.participants.join(" & ")}</div>
+                    {isLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="h-24 text-center">
+                          <div className="flex justify-center items-center">
+                            <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                            Loading direct messages...
                           </div>
                         </TableCell>
-                        <TableCell>{dm.messageCount}</TableCell>
-                        <TableCell className="hidden lg:table-cell max-w-[200px] truncate">{dm.lastMessage}</TableCell>
-                        <TableCell className="hidden lg:table-cell">{formatDate(dm.lastMessageTime)}</TableCell>
-                        <TableCell>
-                          {dm.flagged ? (
-                            <Badge className="bg-red-100 text-red-800">
-                              <Flag className="h-3 w-3 mr-1" />
-                              Flagged
-                            </Badge>
-                          ) : (
-                            <Badge className="bg-green-100 text-green-800">Normal</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedConversation(dm)
-                              setConversationType("dm")
-                            }}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
+                      </TableRow>
+                    ) : filteredDirectMessages.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="h-24 text-center">
+                          No direct messages found.
                         </TableCell>
                       </TableRow>
-                    ))}
+                    ) : (
+                      filteredDirectMessages.map((dm) => (
+                        <TableRow key={dm._id}>
+                          <TableCell>
+                            <div className="flex items-center space-x-2">
+                              <div className="flex -space-x-2">
+                                {dm.participantAvatars.map((avatar, index) => (
+                                  <Avatar key={index} className="h-6 w-6 border-2 border-white">
+                                    <AvatarImage src={avatar} alt={dm.participants[index]} />
+                                    <AvatarFallback>{dm.participants[index].charAt(0)}</AvatarFallback>
+                                  </Avatar>
+                                ))}
+                              </div>
+                              <div className="text-sm">{dm.participants.join(" & ")}</div>
+                            </div>
+                          </TableCell>
+                          <TableCell>{dm.messageCount}</TableCell>
+                          <TableCell className="hidden lg:table-cell max-w-[200px] truncate">{dm.lastMessage}</TableCell>
+                          <TableCell className="hidden lg:table-cell">{formatDate(dm.lastMessageTime)}</TableCell>
+                          <TableCell>
+                            {dm.flagged ? (
+                              <Badge className="bg-red-100 text-red-800">
+                                <Flag className="h-3 w-3 mr-1" />
+                                Flagged
+                              </Badge>
+                            ) : (
+                              <Badge className="bg-green-100 text-green-800">Normal</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedConversation(dm)
+                                setConversationType("dm")
+                              }}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </div>
