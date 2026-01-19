@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { ProtectedRoute } from "@/components/layout/protected-route"
 import { Navbar } from "@/components/layout/navbar"
@@ -51,7 +51,7 @@ interface Conversation {
   updatedAt: Date
 }
 
-export default function ChatbotPage() {
+function ChatbotContent() {
   const { user } = useAuth()
   const searchParams = useSearchParams()
   const initialConversationId = searchParams.get('conversationId')
@@ -101,7 +101,7 @@ export default function ChatbotPage() {
         const response = await api.getConversations()
         if (response.success) {
           setConversations(response.allConversation)
-          
+
           // Auto-select conversation if query param exists
           if (initialConversationId) {
             console.log("Found initialConversationId:", initialConversationId)
@@ -222,11 +222,11 @@ export default function ChatbotPage() {
     }
     setMessages((prev) => [...prev, userMessage])
 
-      try {
-        const formData = new FormData()
-        formData.append('file', file)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
 
-        const response = await api.uploadDocument(formData)
+      const response = await api.uploadDocument(formData)
 
       if (response.success) {
         // Add bot message with summary
@@ -265,9 +265,8 @@ ${response.document.extractedData.map((point: string) => `<li>${point}</li>`).jo
         <div className="flex h-[calc(100vh-4rem)]">
           {/* Desktop Sidebar */}
           <div
-            className={`bg-white border-r border-gray-200 flex flex-col transition-all duration-300 overflow-hidden ${
-              showSidebar ? "w-80" : "w-0"
-            } hidden md:flex`}
+            className={`bg-white border-r border-gray-200 flex flex-col transition-all duration-300 overflow-hidden ${showSidebar ? "w-80" : "w-0"
+              } hidden md:flex`}
           >
             <div className="p-4 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
               <Button onClick={startNewConversation} className="flex-1 mr-2">
@@ -284,9 +283,8 @@ ${response.document.extractedData.map((point: string) => `<li>${point}</li>`).jo
                     {conversations.map((conversation) => (
                       <Card
                         key={conversation._id}
-                        className={`cursor-pointer transition-colors hover:bg-gray-50 ${
-                          activeConversation === conversation._id ? "bg-blue-50 border-blue-200" : ""
-                        }`}
+                        className={`cursor-pointer transition-colors hover:bg-gray-50 ${activeConversation === conversation._id ? "bg-blue-50 border-blue-200" : ""
+                          }`}
                         onClick={() => handleSelectConversation(conversation._id)}
                       >
                         <CardContent className="p-3">
@@ -313,9 +311,8 @@ ${response.document.extractedData.map((point: string) => `<li>${point}</li>`).jo
 
           {/* Mobile Sidebar */}
           <div
-            className={`bg-white border-r border-gray-200 flex flex-col transition-transform duration-300 ${
-              showSidebar ? "translate-x-0" : "-translate-x-full"
-            } fixed top-16 left-0 h-[calc(100vh-4rem)] z-50 w-80 md:hidden overflow-hidden`}
+            className={`bg-white border-r border-gray-200 flex flex-col transition-transform duration-300 ${showSidebar ? "translate-x-0" : "-translate-x-full"
+              } fixed top-16 left-0 h-[calc(100vh-4rem)] z-50 w-80 md:hidden overflow-hidden`}
           >
             <div className="p-4 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
               <Button onClick={startNewConversation} className="flex-1 mr-2">
@@ -335,9 +332,8 @@ ${response.document.extractedData.map((point: string) => `<li>${point}</li>`).jo
                     {conversations.map((conversation) => (
                       <Card
                         key={conversation._id}
-                        className={`cursor-pointer transition-colors hover:bg-gray-50 ${
-                          activeConversation === conversation._id ? "bg-blue-50 border-blue-200" : ""
-                        }`}
+                        className={`cursor-pointer transition-colors hover:bg-gray-50 ${activeConversation === conversation._id ? "bg-blue-50 border-blue-200" : ""
+                          }`}
                         onClick={() => {
                           handleSelectConversation(conversation._id)
                           setShowSidebar(false)
@@ -417,9 +413,8 @@ ${response.document.extractedData.map((point: string) => `<li>${point}</li>`).jo
                             )}
                           </Avatar>
                           <div
-                            className={`rounded-lg p-3 min-w-0 ${
-                              message.role === "user" ? "bg-blue-600 text-white" : "bg-white border border-gray-200"
-                            }`}
+                            className={`rounded-lg p-3 min-w-0 ${message.role === "user" ? "bg-blue-600 text-white" : "bg-white border border-gray-200"
+                              }`}
                           >
                             {message.role === "user" ? (
                               <p className="text-sm break-words">{message.content}</p>
@@ -543,5 +538,13 @@ ${response.document.extractedData.map((point: string) => `<li>${point}</li>`).jo
         </DialogContent>
       </Dialog>
     </ProtectedRoute>
+  )
+}
+
+export default function ChatbotPage() {
+  return (
+    <Suspense fallback={<div className="flex h-screen items-center justify-center">Loading...</div>}>
+      <ChatbotContent />
+    </Suspense>
   )
 }
